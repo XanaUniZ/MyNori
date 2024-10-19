@@ -28,6 +28,11 @@ Point2f Warp::squareToUniformSquare(const Point2f &sample) {
 }
 
 float Warp::squareToUniformSquarePdf(const Point2f &sample) {
+    if (!(sample.array() >= 0).all() && (sample.array() <= 1).all()){
+        cout << sample[0] << endl;
+        cout << sample[1] << endl;
+        cout << endl;
+    }
     return ((sample.array() >= 0).all() && (sample.array() <= 1).all()) ? 1.0f : 0.0f;
 }
 
@@ -47,12 +52,63 @@ float Warp::squareToUniformDiskPdf(const Point2f &p) {
     throw NoriException("Warp::squareToUniformDiskPdf() is not yet implemented!");
 }
 
+// float sign (Point2f p1, Point2f p2, Point2f p3)
+// {
+//     return (p1.x() - p3.x()) * (p2.y() - p3.y()) - (p2.x() - p3.x()) * (p1.y() - p3.y());
+// }
+
+// bool PointInTriangle (Point2f pt, Point2f v1, Point2f v2, Point2f v3)
+// {
+//     float d1, d2, d3;
+//     bool has_neg, has_pos;
+
+//     d1 = sign(pt, v1, v2);
+//     d2 = sign(pt, v2, v3);
+//     d3 = sign(pt, v3, v1);
+
+//     has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+//     has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+//     return !(has_neg && has_pos);
+// }
+
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
-    throw NoriException("Warp::squareToUniformTriangle() is not yet implemented!");
+    // Point2f v1(1,0);
+    // Point2f v2(-1,0);
+    // Point2f v3(0,1);
+
+    // while(true){
+    //     if(PointInTriangle(sample, v1, v2, v3)){
+    //         return sample;
+    //     }
+    // }
+
+    Point2f res;
+    float x = sqrt(2.*sample[0]);
+    float y = 1. - sample[1]*x;
+
+    res[0] = x;
+    res[1] = y;
+    return res;
 }
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    throw NoriException("Warp::squareToUniformTrianglePdf() is not yet implemented!");
+    // Point2f v1(1,0);
+    // Point2f v2(-1,0);
+    // Point2f v3(0,1);
+    
+    // return (PointInTriangle(p, v1, v2, v3)) ? 1.0f/2.0f : 0.0f;
+    float x = p[0];
+    float y = p[1];
+    // cout << x << endl;
+    // cout << y << endl;
+
+    // if ((x<1) && (y<1) && (x>0) && (x<y)) {
+    //     cout << 1.0/2.0f << endl;
+    // }
+    // cout << endl;
+
+    return ((x<1) && (y<1) && (x>0) && (x<y)) ? 0.5f : 0.;
 }
 
 
