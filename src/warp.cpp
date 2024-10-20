@@ -84,7 +84,6 @@ Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     return res;  // Return the 2D Cartesian point
 }
 
-
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
     // Check if the point is inside the triangle
     if (p[0] >= 0.0f && p[1] >= 0.0f && (p[0] + p[1]) <= 1.0f) {
@@ -115,15 +114,25 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     return abs(v[1]) / (4*M_PI); 
 }
 
-// ? Need to implement
+// ? Ask the teacher something weird there.
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
+    float phi = 2.0f * M_PI * sample[0];
+    // acos to ensure z is non-negative (above the plane)
+    float theta = acos(1.0f - sample[1]);  
+
+    float x = sin(theta) * cos(phi);
+    float y = sin(theta) * sin(phi);
+    float z = cos(theta);
+
+    return Vector3f(x, y, z);
 }
 
-
-// ? Need to implement
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
+    if (v[2] >= 0.0f) {
+        return 1.0f / (2.0f * M_PI);  // Uniform PDF over the hemisphere
+    } else {
+        return 0.0f;  // Outside the hemisphere
+    }
 }
 
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
