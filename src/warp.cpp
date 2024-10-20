@@ -148,7 +148,8 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
     res[2] = sin(phi) * sin(theta);
     res[1] = cos(theta);
 
-    return res;}
+    return res;
+}
 
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     if((v.norm() != 1.0f) || v[2] < 0)
