@@ -71,7 +71,7 @@ float Warp::squareToUniformDiskPdf(const Point2f &p) {
 
 //     return !(has_neg && has_pos);
 // }
-// ? This is weird 
+
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     Point2f res;
     float r1 = sample[0];
