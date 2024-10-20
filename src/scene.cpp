@@ -25,6 +25,8 @@
 #include <nori/sampler.h>
 #include <nori/camera.h>
 #include <nori/emitter.h>
+#include <numeric>
+
 
 NORI_NAMESPACE_BEGIN
 
@@ -76,6 +78,59 @@ const Emitter * Scene::sampleEmitter(float rnd, float &pdf) const {
 
 float Scene::pdfEmitter(const Emitter *em) const {
     return 1. / float(m_emitters.size());
+}
+
+const Emitter * Scene::importanceSampleEmitter(float rnd, float &pdf, EmitterQueryRecord* record, Sampler* sampler) const {
+    std::vector<long double> all_luminances;
+    for(int i=0; i < m_emitters.size(); i++){
+        auto total_lumninance = m_emitters[i]->sample(*record, sampler->next2D(), 0.).getLuminance();
+        all_luminances.push_back(total_lumninance);
+    }
+
+    // Sum of the vector so it adds up to one
+    long double luminances_sum = std::accumulate(all_luminances.begin(), all_luminances.end(),0.0f);
+
+    // Normalize luminances
+    for (size_t i = 0; i < all_luminances.size(); ++i) {
+        all_luminances[i] /= luminances_sum;
+    }
+
+    // Calculate the comulative distribution function
+    std::vector<double> cdf(all_luminances.size());
+    std::partial_sum(all_luminances.begin(), all_luminances.end(), cdf.begin());
+
+
+    // Use upper_bound to find the index corresponding to the randomFloat
+    auto it = std::upper_bound(cdf.begin(), cdf.end(), rnd);
+
+    // Return the index of the first element greater than randomFloat
+    size_t sampled_idx;
+    if (it == cdf.end()) {
+        // If randomFloat is exactly 1.0, or floating-point precision causes an issue,
+        // clamp the result to the last index
+        sampled_idx =  m_emitters.size() - 1;
+    }
+    else{
+        sampled_idx =  it - cdf.begin();
+    }
+
+	pdf = all_luminances[sampled_idx];
+
+	return m_emitters[sampled_idx];
+}
+
+float Scene::pdfImportanceEmitter(const Emitter *em, const Point3f& ref, EmitterQueryRecord* record, Sampler* sampler) const {
+    std::vector<long double> all_luminances;
+    for(int i=0; i < m_emitters.size(); i++){
+        auto total_lumninance = m_emitters[i]->sample(*record, sampler->next2D(), 0.).getLuminance();
+        all_luminances.push_back(total_lumninance);
+    }
+
+    // Sum of the vector so it adds up to one
+    long double luminances_sum = std::accumulate(all_luminances.begin(), all_luminances.end(),0.0f);
+
+
+    return em->eval(*record).getLuminance() / luminances_sum;
 }
 
 

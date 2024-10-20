@@ -72,6 +72,11 @@ public:
 
     float pdfEmitter(const Emitter *em) const;
 
+    /// Importance Sample emitter
+	const Emitter *importanceSampleEmitter(float rnd, float &pdf, EmitterQueryRecord* record,  Sampler* sampler) const;
+
+    float pdfImportanceEmitter(const Emitter *em, const Point3f& ref, EmitterQueryRecord* record, Sampler* sampler) const;
+
 	/// Get enviromental emmiter
 	const Emitter *getEnvironmentalEmitter() const
 	{
