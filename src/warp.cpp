@@ -114,25 +114,14 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     return abs(v[1]) / (4*M_PI); 
 }
 
-// ? Ask the teacher something weird there.
+// ? Need to implement
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    float phi = 2.0f * M_PI * sample[0];
-    // acos to ensure z is non-negative (above the plane)
-    float theta = acos(1.0f - sample[1]);  
-
-    float x = sin(theta) * cos(phi);
-    float y = sin(theta) * sin(phi);
-    float z = cos(theta);
-
-    return Vector3f(x, y, z);
+    throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
 }
 
+// ? Need to implement
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    if (v[2] >= 0.0f) {
-        return 1.0f / (2.0f * M_PI);  // Uniform PDF over the hemisphere
-    } else {
-        return 0.0f;  // Outside the hemisphere
-    }
+    throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
 }
 
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
@@ -147,11 +136,14 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
 }
 
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
-    if((v.norm() != 1.0f) || v[2] < 0)
-        return 0.0f;
-    float theta = M_PI/4 - asin(v[2]); 
-    return cos(theta)/M_PI;
+    // Ensure that v is in the upper hemisphere
+    if (v[1] > 0.0f) {  // v[1] is the y-component, corresponding to cos(theta)
+        return v[1] / M_PI;  // Cosine-weighted PDF
+    } else {
+        return 0.0f;  // Outside the hemisphere, PDF is zero
+    }
 }
+
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
     throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
