@@ -36,16 +36,49 @@ float Warp::squareToUniformSquarePdf(const Point2f &sample) {
     return ((sample.array() >= 0).all() && (sample.array() <= 1).all()) ? 1.0f : 0.0f;
 }
 
-// ? Need to implement
 Point2f Warp::squareToTent(const Point2f &sample) {
-    throw NoriException("Warp::squareToTent() is not yet implemented!");
+    float x, y;
+
+    // Para el componente x
+    if (sample[0] < 0.5f) {
+        x = sqrt(2.0f * sample[0]) - 1.0f;  
+    } else {
+        x = 1.0f - sqrt(2.0f * (1.0f - sample[0]));  
+    }
+
+    // Para el componente y
+    if (sample[1] < 0.5f) {
+        y = sqrt(2.0f * sample[1]) - 1.0f;  
+    } else {
+        y = 1.0f - sqrt(2.0f * (1.0f - sample[1]));  
+    }
+
+    return Point2f(x, y); 
 }
 
-// ? Need to implement
 float Warp::squareToTentPdf(const Point2f &p) {
-    throw NoriException("Warp::squareToTentPdf() is not yet implemented!");
+    float pdf_x, pdf_y;
+
+    // Para el componente x
+    if (p[0] >= -1.0f && p[0] <= 1.0f) {
+        pdf_x = 1.0f - fabs(p[0]);  // La probabilidad disminuye hacia los bordes
+    } else {
+        pdf_x = 0.0f;  
+    }
+
+    // Para el componente y
+    if (p[1] >= -1.0f && p[1] <= 1.0f) {
+        pdf_y = 1.0f - fabs(p[1]);  // La probabilidad disminuye hacia los bordes
+    } else {
+        pdf_y = 0.0f;  
+    }
+
+    return pdf_x * pdf_y;  // La PDF total es el producto de las PDFs de x e y
 }
 
+
+
+// Need to revise
 Point2f Warp::squareToUniformDisk(const Point2f &sample) {
     Point2f res;
     float r = sqrt(sample[0]);        
@@ -57,7 +90,7 @@ Point2f Warp::squareToUniformDisk(const Point2f &sample) {
 
     return res;
 }
-
+// Need to revise
 float Warp::squareToUniformDiskPdf(const Point2f &p) {
     float distSquared = pow(p[0],2) + pow(p[1],2);  // Distance from origin
 
@@ -114,15 +147,36 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     return abs(v[1]) / (4*M_PI); 
 }
 
-// ? Need to implement
+// ? ask xavi how to do the half of this one.
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
+    // Sample[0] is used to determine the azimuthal angle phi
+    float phi = 2.0f * M_PI * sample[0];  // Azimuthal angle between [0, 2π]
+    
+    // Correct calculation of cosTheta for uniform sampling
+    float cosTheta = 1.0f - sample[1];  // Correctly maps to [0, 1] for the hemisphere
+    
+    float sinTheta = sqrt(1.0f - cosTheta * cosTheta);  // Compute sin(theta) from cos(theta)
+    
+    // Convert from spherical coordinates to Cartesian coordinates
+    float x = sinTheta * cos(phi);
+    float y = sinTheta * sin(phi);
+    float z = cosTheta;
+
+    // Return the 3D vector (x, y, z) that lies on the upper hemisphere (z >= 0)
+    return Vector3f(x, y, z);
 }
 
-// ? Need to implement
+
+
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
+    // Ensure that v lies on the upper hemisphere, i.e., z >= 0
+    if (v[2] >= 0.0f) {
+        return 1.0f / (2.0f * M_PI);  // Uniform PDF for the hemisphere
+    } else {
+        return 0.0f;  // PDF is zero for points outside the hemisphere
+    }
 }
+
 
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
     Vector3f res;
