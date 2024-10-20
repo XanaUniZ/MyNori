@@ -36,41 +36,37 @@ float Warp::squareToUniformSquarePdf(const Point2f &sample) {
     return ((sample.array() >= 0).all() && (sample.array() <= 1).all()) ? 1.0f : 0.0f;
 }
 
+// ? Need to implement
 Point2f Warp::squareToTent(const Point2f &sample) {
     throw NoriException("Warp::squareToTent() is not yet implemented!");
 }
 
+// ? Need to implement
 float Warp::squareToTentPdf(const Point2f &p) {
     throw NoriException("Warp::squareToTentPdf() is not yet implemented!");
 }
 
 Point2f Warp::squareToUniformDisk(const Point2f &sample) {
-    throw NoriException("Warp::squareToUniformDisk() is not yet implemented!");
+    Point2f res;
+    float r = sqrt(sample[0]);        
+    float theta = 2.0f * M_PI * sample[1]; 
+
+    // Cartesians again
+    res[0] = r * cos(theta);  
+    res[1] = r * sin(theta);  
+
+    return res;
 }
 
 float Warp::squareToUniformDiskPdf(const Point2f &p) {
-    throw NoriException("Warp::squareToUniformDiskPdf() is not yet implemented!");
+    float distSquared = pow(p[0],2) + pow(p[1],2);  // Distance from origin
+
+    if (distSquared <= 1.0f) {
+        return 1.0f / M_PI;  // Uniform PDF inside the disk
+    } else {
+        return 0.0f;  // Outside the unit disk
+    }
 }
-
-// float sign (Point2f p1, Point2f p2, Point2f p3)
-// {
-//     return (p1.x() - p3.x()) * (p2.y() - p3.y()) - (p2.x() - p3.x()) * (p1.y() - p3.y());
-// }
-
-// bool PointInTriangle (Point2f pt, Point2f v1, Point2f v2, Point2f v3)
-// {
-//     float d1, d2, d3;
-//     bool has_neg, has_pos;
-
-//     d1 = sign(pt, v1, v2);
-//     d2 = sign(pt, v2, v3);
-//     d3 = sign(pt, v3, v1);
-
-//     has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-//     has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-//     return !(has_neg && has_pos);
-// }
 
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     Point2f res;
@@ -82,7 +78,6 @@ Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     float beta = (1.0f - r2) * sqrt(r1);
     float gamma = r2 * sqrt(r1);
 
-
     res[0] = beta; 
     res[1] = 1.0f - alpha - beta;
  
@@ -91,7 +86,7 @@ Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
 
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    // Check if the point is inside the triangle by ensuring the barycentric coordinates are valid
+    // Check if the point is inside the triangle
     if (p[0] >= 0.0f && p[1] >= 0.0f && (p[0] + p[1]) <= 1.0f) {
         return 2.0f;  // Constant PDF for a uniform distribution on the triangle
     } else {
@@ -120,10 +115,13 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     return abs(v[1]) / (4*M_PI); 
 }
 
+// ? Need to implement
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
     throw NoriException("Warp::squareToUniformHemisphere() is not yet implemented!");
 }
 
+
+// ? Need to implement
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
     throw NoriException("Warp::squareToUniformHemispherePdf() is not yet implemented!");
 }
