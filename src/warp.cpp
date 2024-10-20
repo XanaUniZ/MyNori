@@ -71,44 +71,32 @@ float Warp::squareToUniformDiskPdf(const Point2f &p) {
 
 //     return !(has_neg && has_pos);
 // }
-
+// ? This is weird 
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
-    // Point2f v1(1,0);
-    // Point2f v2(-1,0);
-    // Point2f v3(0,1);
-
-    // while(true){
-    //     if(PointInTriangle(sample, v1, v2, v3)){
-    //         return sample;
-    //     }
-    // }
-
     Point2f res;
-    float x = sqrt(2.*sample[0]);
-    float y = 1. - sample[1]*x;
+    float r1 = sample[0];
+    float r2 = sample[1];
 
-    res[0] = x;
-    res[1] = y;
-    return res;
+    // Calculate barycentric coordinates
+    float alpha = 1.0f - sqrt(r1);
+    float beta = (1.0f - r2) * sqrt(r1);
+    float gamma = r2 * sqrt(r1);
+
+
+    res[0] = beta; 
+    res[1] = 1.0f - alpha - beta;
+ 
+    return res;  // Return the 2D Cartesian point
 }
 
+
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    // Point2f v1(1,0);
-    // Point2f v2(-1,0);
-    // Point2f v3(0,1);
-    
-    // return (PointInTriangle(p, v1, v2, v3)) ? 1.0f/2.0f : 0.0f;
-    float x = p[0];
-    float y = p[1];
-    // cout << x << endl;
-    // cout << y << endl;
-
-    // if ((x<1) && (y<1) && (x>0) && (x<y)) {
-    //     cout << 1.0/2.0f << endl;
-    // }
-    // cout << endl;
-
-    return ((x<1) && (y<1) && (x>0) && (x<y)) ? 0.5f : 0.;
+    // Check if the point is inside the triangle by ensuring the barycentric coordinates are valid
+    if (p[0] >= 0.0f && p[1] >= 0.0f && (p[0] + p[1]) <= 1.0f) {
+        return 2.0f;  // Constant PDF for a uniform distribution on the triangle
+    } else {
+        return 0.0f;  // Outside the triangle
+    }
 }
 
 
@@ -129,7 +117,7 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     // return abs(sin(atan2(v[0], v[1]))) / (4*M_PI);
     // return abs(acos(v[2])) / (4*M_PI);
     // std::cout << v[1] << std::endl;
-    return abs(v[1]) / (4*M_PI);
+    return abs(v[1]) / (4*M_PI); 
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
