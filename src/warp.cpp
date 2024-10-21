@@ -111,8 +111,8 @@ Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     float beta = (1.0f - r2) * sqrt(r1);
     float gamma = r2 * sqrt(r1);
 
-    res[0] = beta; 
-    res[1] = 1.0f - alpha - beta;
+    res[0] = alpha; 
+    res[1] = beta;
  
     return res;  // Return the 2D Cartesian point
 }
