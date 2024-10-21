@@ -35,7 +35,7 @@ float Warp::squareToUniformSquarePdf(const Point2f &sample) {
     }
     return ((sample.array() >= 0).all() && (sample.array() <= 1).all()) ? 1.0f : 0.0f;
 }
-
+// ? Do we need to do this ?
 Point2f Warp::squareToTent(const Point2f &sample) {
     float x, y;
 
@@ -138,13 +138,7 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
-    if(v.norm() != 1.0f)
-        return 0.0f;
-    
-    // return abs(sin(atan2(v[0], v[1]))) / (4*M_PI);
-    // return abs(acos(v[2])) / (4*M_PI);
-    // std::cout << v[1] << std::endl;
-    return abs(v[1]) / (4*M_PI); 
+    return 1.0f / (4.0f*M_PI); 
 }
 
 // ? ask xavi how to do the half of this one.
@@ -200,11 +194,40 @@ float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
 
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
-    throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
+    // Sample theta_h using inverse CDF of Beckmann distribution
+    float theta_h = atanf(alpha * sqrtf(-logf(1.0f - sample[0])));
+    
+    // Sample phi uniformly in [0, 2pi]
+    float phi = 2.0f * M_PI * sample[1];
+    
+    // Convert spherical coordinates to Cartesian coordinates
+    float sin_theta_h = sinf(theta_h);
+    float x = sin_theta_h * cosf(phi);
+    float y = sin_theta_h * sinf(phi);
+    float z = cosf(theta_h);
+    
+    // Return the sampled vector on the hemisphere
+    return Vector3f(x, y, z);
 }
 
+
+
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
-    throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
+    // Compute the cosine of the angle theta_h
+    float cos_theta_h = m.z(); // z component is cos(theta_h)
+    
+    if (cos_theta_h <= 0) {
+        return 0.0f; // Points below the hemisphere have zero probability
+    }
+    
+    // Compute the Beckmann distribution function D(omega_h)
+    float tan_theta_h = sqrtf(1.0f - cos_theta_h * cos_theta_h) / cos_theta_h;
+    float exponent = - (tan_theta_h * tan_theta_h) / (alpha * alpha);
+    float D = expf(exponent) / (M_PI * alpha * alpha * powf(cos_theta_h, 4));
+    
+    // Return the PDF as D(omega_h) * cos(theta_h)
+    return D * cos_theta_h;
 }
+
 
 NORI_NAMESPACE_END
