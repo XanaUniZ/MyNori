@@ -37,43 +37,43 @@ float Warp::squareToUniformSquarePdf(const Point2f &sample) {
 }
 // ? Do we need to do this ?
 Point2f Warp::squareToTent(const Point2f &sample) {
-    float x, y;
+    // float x, y;
 
-    // Para el componente x
-    if (sample[0] < 0.5f) {
-        x = sqrt(2.0f * sample[0]) - 1.0f;  
-    } else {
-        x = 1.0f - sqrt(2.0f * (1.0f - sample[0]));  
-    }
+    // // Para el componente x
+    // if (sample[0] < 0.5f) {
+    //     x = sqrt(2.0f * sample[0]) - 1.0f;  
+    // } else {
+    //     x = 1.0f - sqrt(2.0f * (1.0f - sample[0]));  
+    // }
 
-    // Para el componente y
-    if (sample[1] < 0.5f) {
-        y = sqrt(2.0f * sample[1]) - 1.0f;  
-    } else {
-        y = 1.0f - sqrt(2.0f * (1.0f - sample[1]));  
-    }
+    // // Para el componente y
+    // if (sample[1] < 0.5f) {
+    //     y = sqrt(2.0f * sample[1]) - 1.0f;  
+    // } else {
+    //     y = 1.0f - sqrt(2.0f * (1.0f - sample[1]));  
+    // }
 
-    return Point2f(x, y); 
+    // return Point2f(x, y); 
 }
 
 float Warp::squareToTentPdf(const Point2f &p) {
-    float pdf_x, pdf_y;
+    // float pdf_x, pdf_y;
 
-    // Para el componente x
-    if (p[0] >= -1.0f && p[0] <= 1.0f) {
-        pdf_x = 1.0f - fabs(p[0]);  // La probabilidad disminuye hacia los bordes
-    } else {
-        pdf_x = 0.0f;  
-    }
+    // // Para el componente x
+    // if (p[0] >= -1.0f && p[0] <= 1.0f) {
+    //     pdf_x = 1.0f - fabs(p[0]);  // La probabilidad disminuye hacia los bordes
+    // } else {
+    //     pdf_x = 0.0f;  
+    // }
 
-    // Para el componente y
-    if (p[1] >= -1.0f && p[1] <= 1.0f) {
-        pdf_y = 1.0f - fabs(p[1]);  // La probabilidad disminuye hacia los bordes
-    } else {
-        pdf_y = 0.0f;  
-    }
+    // // Para el componente y
+    // if (p[1] >= -1.0f && p[1] <= 1.0f) {
+    //     pdf_y = 1.0f - fabs(p[1]);  // La probabilidad disminuye hacia los bordes
+    // } else {
+    //     pdf_y = 0.0f;  
+    // }
 
-    return pdf_x * pdf_y;  // La PDF total es el producto de las PDFs de x e y
+    // return pdf_x * pdf_y;  // La PDF total es el producto de las PDFs de x e y
 }
 
 
@@ -146,8 +146,8 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
     // Sample[0] is used to determine the azimuthal angle phi
     float phi = 2.0f * M_PI * sample[0];  // Azimuthal angle between [0, 2π]
     
-    // Correct calculation of cosTheta for uniform sampling
-    float cosTheta = 1.0f - sample[1];  // Correctly maps to [0, 1] for the hemisphere
+    // Calculation of cosTheta for uniform sampling
+    float cosTheta =sample[1]; 
     
     float sinTheta = sqrt(1.0f - cosTheta * cosTheta);  // Compute sin(theta) from cos(theta)
     
