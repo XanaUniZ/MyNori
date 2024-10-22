@@ -51,14 +51,35 @@ public:
 		// This function call can be done by bsdf sampling routines.
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		throw NoriException("AreaEmitter::eval() is not yet implemented!");
-	}
+		
+		Point2f uv = lRec.uv;
+		Normal3f n = lRec.n;
+		Vector3f wi = lRec.wi;
+		
+		if(n[0] * wi[0] + n[1] * wi[1] + n[2] * wi[2] > 0){
+			return Color3f (0.0f);
+		}
+		else{
+			return m_radiance->eval(uv);
+		}
+
+		return 0;
+	}	
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		throw NoriException("AreaEmitter::sample() is not yet implemented!");
+		Point3f ligth_point; 
+		Normal3f ligth_normal;
+		Point2f ligth_uv;
+
+		m_mesh->samplePosition(sample, ligth_point, ligth_normal, ligth_uv);
+
+		lRec.uv = ligth_uv;
+		lRec.n = ligth_normal;
+
+
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
