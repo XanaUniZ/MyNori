@@ -73,9 +73,11 @@ public:
     float pdfEmitter(const Emitter *em) const;
 
     /// Importance Sample emitter
-	const Emitter *importanceSampleEmitter(float rnd, float &pdf, EmitterQueryRecord* record,  Sampler* sampler) const;
-
-    float pdfImportanceEmitter(const Emitter *em, const Point3f& ref, EmitterQueryRecord* record, Sampler* sampler) const;
+	const Emitter *importanceSampleEmitterIntensive(float rnd, float &pdf, EmitterQueryRecord* record,  Sampler* sampler) const;
+    float pdfImportanceEmitterIntensive(const Emitter *em, const Point3f& ref, EmitterQueryRecord* record, Sampler* sampler) const;
+    
+	const Emitter *importanceSampleEmitter(float rnd, float &pdf) const;
+    float pdfImportanceEmitter(const size_t em_idx) const;
 
 	/// Get enviromental emmiter
 	const Emitter *getEnvironmentalEmitter() const
@@ -150,6 +152,8 @@ private:
     Sampler *m_sampler = nullptr;
     Camera *m_camera = nullptr;
     Accel *m_accel = nullptr;
+
+    DiscretePDF  emitters_pdf;                  ///< Discrete pdf for sampling ligths wrt their luminance. 
 };
 
 NORI_NAMESPACE_END

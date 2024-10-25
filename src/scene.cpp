@@ -46,9 +46,25 @@ void Scene::activate() {
 
     // Check if there's emitters attached to meshes, and
     // add them to the scene. 
-    for(unsigned int i=0; i<m_meshes.size(); ++i )
-        if (m_meshes[i]->isEmitter())
+
+    if (!m_sampler) {
+        /* Create a default (independent) sampler */
+        m_sampler = static_cast<Sampler*>(
+            NoriObjectFactory::createInstance("independent", PropertyList()));
+    }
+
+    for(unsigned int i=0; i<m_meshes.size(); ++i ){
+        if (m_meshes[i]->isEmitter()){
             m_emitters.push_back(m_meshes[i]->getEmitter());
+        }
+    }
+
+    EmitterQueryRecord record(Vector3f(0.));
+    emitters_pdf.reserve(m_emitters.size());
+    for(unsigned int i=0; i<m_emitters.size(); ++i ){
+        emitters_pdf.append(m_emitters[i]->sample(record, m_sampler->next2D(), 0.).getLuminance());
+    }
+    emitters_pdf.normalize();
 
     m_accel->build();
 
@@ -57,12 +73,6 @@ void Scene::activate() {
     if (!m_camera)
         throw NoriException("No camera was specified!");
     
-    if (!m_sampler) {
-        /* Create a default (independent) sampler */
-        m_sampler = static_cast<Sampler*>(
-            NoriObjectFactory::createInstance("independent", PropertyList()));
-    }
-
     cout << endl;
     cout << "Configuration: " << toString() << endl;
     cout << endl;
@@ -80,7 +90,7 @@ float Scene::pdfEmitter(const Emitter *em) const {
     return 1. / float(m_emitters.size());
 }
 
-const Emitter * Scene::importanceSampleEmitter(float rnd, float &pdf, EmitterQueryRecord* record, Sampler* sampler) const {
+const Emitter * Scene::importanceSampleEmitterIntensive(float rnd, float &pdf, EmitterQueryRecord* record, Sampler* sampler) const {
     std::vector<long double> all_luminances;
     for(int i=0; i < m_emitters.size(); i++){
         auto total_lumninance = m_emitters[i]->sample(*record, sampler->next2D(), 0.).getLuminance();
@@ -119,7 +129,7 @@ const Emitter * Scene::importanceSampleEmitter(float rnd, float &pdf, EmitterQue
 	return m_emitters[sampled_idx];
 }
 
-float Scene::pdfImportanceEmitter(const Emitter *em, const Point3f& ref, EmitterQueryRecord* record, Sampler* sampler) const {
+float Scene::pdfImportanceEmitterIntensive(const Emitter *em, const Point3f& ref, EmitterQueryRecord* record, Sampler* sampler) const {
     std::vector<long double> all_luminances;
     for(int i=0; i < m_emitters.size(); i++){
         auto total_lumninance = m_emitters[i]->sample(*record, sampler->next2D(), 0.).getLuminance();
@@ -131,6 +141,19 @@ float Scene::pdfImportanceEmitter(const Emitter *em, const Point3f& ref, Emitter
 
 
     return em->eval(*record).getLuminance() / luminances_sum;
+}
+
+const Emitter * Scene::importanceSampleEmitter(float rnd, float &pdf) const {
+    // Choose an index randomly 
+    size_t index = emitters_pdf.sample(rnd);
+    
+	pdf = pdfImportanceEmitter(index);
+
+	return m_emitters[index];
+}
+
+float Scene::pdfImportanceEmitter(const size_t em_idx) const {
+	return emitters_pdf[em_idx];
 }
 
 

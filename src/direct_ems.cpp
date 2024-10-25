@@ -23,8 +23,9 @@ public:
         EmitterQueryRecord emitterRecord(its.p);
         // Sample a ligth in the scene
         float random_01 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        const Emitter* em = scene->sampleEmitter(random_01, pdflight);
-        // const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight, &emitterRecord, sampler);
+        // const Emitter* em = scene->sampleEmitter(random_01, pdflight);
+        // const Emitter* em = scene->importanceSampleEmitterIntensive(random_01, pdflight, &emitterRecord, sampler);
+        const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight);
 
 
         // Sample the point sources, getting its radiance and direction
