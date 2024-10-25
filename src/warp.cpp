@@ -126,17 +126,16 @@ float Warp::squareToUniformTrianglePdf(const Point2f& p) {
 
 
 Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
-    Vector3f res;
     float  theta = acos(1 - 2 * sample[0]); 
     float phi = 2 * M_PI * sample[1]; 
-    res[0] = cos(phi) * sin(theta);
-    res[1] = sin(phi) * sin(theta);
-    res[2] = cos(theta);
-    return res;
+    float x = cos(phi) * sin(theta);
+    float y = sin(phi) * sin(theta);
+    float z = cos(theta);
+    return Vector3f(x, y, z);
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
-    if(abs(v.norm() - 1.) > 0.000000001f){
+    if(abs(v.norm() - 1.) > 0.00001f){
         return 0.0; 
     }
     return 1.0f / (4.0f*M_PI);
@@ -165,7 +164,7 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
     // Ensure that v lies on the upper hemisphere, i.e., z >= 0
-    if(abs(v.norm() - 1.) > 0.000000001f){
+    if(abs(v.norm() - 1.) > 0.01f){
         return 0.0; 
     }
     
@@ -191,11 +190,11 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     // Ensure that v is in the upper hemisphere
 
-    if(abs(v.norm() - 1.) > 0.000000001f){
+    if(abs(v.norm() - 1.) > 0.0001f){
         return 0.0; 
     }
 
-    if (v[1] > 0.0f) {  // v[1] is the y-component, corresponding to cos(theta)
+    if (v[2] > 0.0f) {  // v[1] is the y-component, corresponding to cos(theta)
         return v[1] / M_PI;  // Cosine-weighted PDF
     } else {
         return 0.0f;  // Outside the hemisphere, PDF is zero

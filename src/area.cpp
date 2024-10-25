@@ -79,9 +79,6 @@ public:
 
 
 		float mesh_pdf = pdf(lRec);
-		float normalization = lRec.dist / abs(lRec.n.dot(lRec.wi));
-		mesh_pdf *= normalization;
-		lRec.pdf = mesh_pdf;
 
 		Color3f res = eval(lRec);
 
@@ -95,8 +92,10 @@ public:
 	virtual float pdf(const EmitterQueryRecord &lRec) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
-			
-		return m_mesh->pdf(lRec.p);
+		float mesh_pdf = m_mesh->pdf(lRec.p);
+		float normalization = lRec.dist / abs(lRec.n.dot(lRec.wi));
+		mesh_pdf *= normalization;
+		return mesh_pdf;
 	}
 
 

@@ -23,18 +23,14 @@ public:
         EmitterQueryRecord emitterRecord(its.p);
         // Sample a ligth in the scene
         float random_01 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        // const Emitter* em = scene->sampleEmitter(random_01, pdflight);
+        const Emitter* em = scene->sampleEmitter(random_01, pdflight);
         // const Emitter* em = scene->importanceSampleEmitterIntensive(random_01, pdflight, &emitterRecord, sampler);
-        const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight);
-
+        // const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight);
 
         // Sample the point sources, getting its radiance and direction
         Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
-        // cout << "------------------------------" << endl;
-        // cout << "Le: " << Le << endl;
-        // cout << "------------------------------" << endl;
 
-        Ray3f shadow_ray = Ray3f(its.p, (emitterRecord.p - its.p).normalized());
+        Ray3f shadow_ray = Ray3f(its.p, emitterRecord.wi.normalized());
         Intersection shadow_ray_its;
 
         if (its.mesh->isEmitter()){
@@ -53,7 +49,7 @@ public:
 
         // Perform a visibility query (shadow ray) and compute intersection
         if ((!scene->rayIntersect(shadow_ray, shadow_ray_its) ||
-            ((emitterRecord.p - its.p).norm() <= shadow_ray_its.t))){
+            (emitterRecord.dist <= shadow_ray_its.t))){
 
             BSDFQueryRecord bsdfRecord(
                 its.toLocal(-ray.d),
