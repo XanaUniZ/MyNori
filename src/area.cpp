@@ -56,30 +56,36 @@ public:
 		Normal3f n = lRec.n;
 		Vector3f wi = lRec.wi;
 		
-		if(n[0] * wi[0] + n[1] * wi[1] + n[2] * wi[2] > 0){
+		// Check if the ray hits in front of in the back
+		if(n.dot(wi) > 0){
 			return Color3f (0.0f);
 		}
 		else{
 			return m_radiance->eval(uv);
 		}
-
-		return 0;
 	}	
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		Point3f ligth_point; 
-		Normal3f ligth_normal;
-		Point2f ligth_uv;
+		// Sample a position in the ligth
+		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
 
-		m_mesh->samplePosition(sample, ligth_point, ligth_normal, ligth_uv);
+		// Store the information needed in the lRec
+		lRec.wi = (lRec.p - lRec.ref); // ab = (b-a)
+		lRec.dist = lRec.wi.norm();
+		lRec.wi /= lRec.dist;
 
-		lRec.uv = ligth_uv;
-		lRec.n = ligth_normal;
 
+		float mesh_pdf = pdf(lRec);
+		float normalization = lRec.dist / abs(lRec.n.dot(lRec.wi));
+		mesh_pdf *= normalization;
+		lRec.pdf = mesh_pdf;
 
+		Color3f res = eval(lRec);
+
+		return (res / mesh_pdf);
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -89,8 +95,8 @@ public:
 	virtual float pdf(const EmitterQueryRecord &lRec) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
-
-		throw NoriException("AreaEmitter::pdf() is not yet implemented!");
+			
+		return m_mesh->pdf(lRec.p);
 	}
 
 

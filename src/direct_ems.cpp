@@ -23,27 +23,37 @@ public:
         EmitterQueryRecord emitterRecord(its.p);
         // Sample a ligth in the scene
         float random_01 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        // const Emitter* em = scene->sampleEmitter(random_01, pdflight);
-        const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight, &emitterRecord, sampler);
+        const Emitter* em = scene->sampleEmitter(random_01, pdflight);
+        // const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight, &emitterRecord, sampler);
 
 
         // Sample the point sources, getting its radiance and direction
         Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
+        // cout << "------------------------------" << endl;
+        // cout << "Le: " << Le << endl;
+        // cout << "------------------------------" << endl;
 
-        Ray3f shadow_ray = Ray3f(its.p, emitterRecord.p - its.p);
+        Ray3f shadow_ray = Ray3f(its.p, (emitterRecord.p - its.p).normalized());
         Intersection shadow_ray_its;
 
         if (its.mesh->isEmitter()){
-            cout << its.mesh->isEmitter() << endl;
-            EmitterQueryRecord selfEmitterRecord(its.p);
-            Lo += its.mesh->getEmitter()->eval(selfEmitterRecord);
+            EmitterQueryRecord selfEmitterRecord(Vector3f(0.));
+            selfEmitterRecord.p = its.p;
+            selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
+            selfEmitterRecord.dist = its.t;
+
+            selfEmitterRecord.uv = its.uv;
+            selfEmitterRecord.n = its.geoFrame.n;
+            selfEmitterRecord.pdf = its.mesh->getEmitter()->pdf(selfEmitterRecord);
+            
+            Color3f direct_radiance = its.mesh->getEmitter()->eval(selfEmitterRecord);
+            Lo += direct_radiance;
         }
 
         // Perform a visibility query (shadow ray) and compute intersection
         if ((!scene->rayIntersect(shadow_ray, shadow_ray_its) ||
-            ((emitterRecord.p - its.p).norm() < shadow_ray_its.t))){
-        // if (!scene->rayIntersect(ray_to_light, ray_to_light_its)){
-            // Evaluate the BSDF using the outgoing and incoming directions
+            ((emitterRecord.p - its.p).norm() <= shadow_ray_its.t))){
+
             BSDFQueryRecord bsdfRecord(
                 its.toLocal(-ray.d),
                 its.toLocal(emitterRecord.wi),
@@ -52,8 +62,12 @@ public:
             );
 
             // Accumulate incident light * foreshortening * BSDF term
+            Color3f bsdf = its.mesh->getBSDF()->eval(bsdfRecord);
             Lo += (Le * its.shFrame.n.dot(emitterRecord.wi) *
-                its.mesh->getBSDF()->eval(bsdfRecord)) / pdflight;
+                bsdf) / pdflight;
+        }
+        else{
+            // cout << "SHADOW -> " << shadow_ray_its.p << endl;
         }
 
         return Lo;

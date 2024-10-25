@@ -45,6 +45,10 @@ void Mesh::activate() {
     }
 
     m_pdf.reserve(m_F.cols());
+    for(int i=0; i<m_F.cols(); i++){
+        m_pdf.append(surfaceArea(i));
+    }
+    m_pdf.normalize();
 }
 
 float Mesh::surfaceArea(n_UINT index) const {
@@ -114,14 +118,20 @@ Point3f Mesh::getCentroid(n_UINT index) const {
  */
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
+
     Point2f sample_copy = Point2f(sample);
     size_t triang_idx = m_pdf.sampleReuse(sample_copy[0]);
+    // cout << triang_idx  << endl;
+    // cout << sample_copy  << endl;
+
     n_UINT i0 = m_F(0, triang_idx), i1 = m_F(1, triang_idx), i2 = m_F(2, triang_idx);
+
     
 	Point2f bar_coord = Warp::squareToUniformTriangle(sample_copy);
     float alpha = bar_coord[0];	
     float beta = bar_coord[1];	
-    float gamma = 1-alpha-beta;	
+    float gamma = 1. - alpha-beta;	
+    // cout << tfm::format("[%f, %f, %f]", alpha, beta, gamma) << endl;
 
     // Calculate the interpolated point
     const Point3f v0 = m_V.col(i0), v1 = m_V.col(i1), v2 = m_V.col(i2);
@@ -130,30 +140,45 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
     p[2] = alpha*v0[2] + beta*v1[2] + gamma*v2[2];
 
     // Calculate the interpolated normals
-    const Point3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
-    n[0] = alpha*n0[0] + beta*n1[0] + gamma*n2[0];
-    n[1] = alpha*n0[1] + beta*n1[1] + gamma*n2[1];
-    n[2] = alpha*v0[2] + beta*n1[2] + gamma*n2[2];
+    // cout << m_N.size() << endl;
+    // cout << m_V.cols() << endl;
+    // cout << m_UV.cols() << endl;
+    // cout << m_UV.rows() << endl;
+    
+    if(m_N.size() != 0){
+        // n[0] = m_N(0, triang_idx);
+        // n[1] = m_N(1, triang_idx);
+        // n[2] = m_N(2, triang_idx);
+
+        const Point3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
+        n[0] = alpha*n0[0] + beta*n1[0] + gamma*n2[0];
+        n[1] = alpha*n0[1] + beta*n1[1] + gamma*n2[1];
+        n[2] = alpha*v0[2] + beta*n1[2] + gamma*n2[2];
+        n /= n.norm();
+    }
+    else{
+        n = Normal3f((v1 - v0).cross(v2 - v0).normalized());
+    }
 
     // Calculate the interpolated UV
-    const Point2f uv0 = m_N.col(i0), uv1 = m_N.col(i1), uv2 = m_N.col(i2);
-    uv[0] = alpha*uv0[0] + beta*uv1[0] + gamma*uv2[0];
-    uv[1] = alpha*uv0[1] + beta*uv1[1] + gamma*uv2[1];
+    if(m_UV.size() != 0){
+        const Point2f uv0 = m_UV.col(i0), uv1 = m_UV.col(i1), uv2 = m_UV.col(i2);
+        uv[0] = alpha*uv0[0] + beta*uv1[0] + gamma*uv2[0];
+        uv[1] = alpha*uv0[1] + beta*uv1[1] + gamma*uv2[1];
+    }
+
+    // cout << n << endl << endl;
+    // cout << uv << endl << endl;
+    
 }
 
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
-    // n_UINT n_vertices = getVertexCount();
-    // float total_area_manual=0.;
-	// for(n_UINT v_idx = 0; v_idx < n_vertices; v_idx++){
-    //     total_area_manual += surfaceArea(v_idx);
-    // }	
-	
     // Alternative
-    float total_area = m_pdf.getNormalization();
+    float normalization = m_pdf.getNormalization();
 
-	return 1./total_area;
+	return normalization;
 }
 
 

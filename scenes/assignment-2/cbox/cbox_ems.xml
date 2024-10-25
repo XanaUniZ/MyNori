@@ -15,6 +15,7 @@
 	</camera>
 
 	<sampler type="independent">
+		<!-- <integer name="sampleCount" value="2"/> -->
 		<integer name="sampleCount" value="512"/>
 	</sampler>
 
