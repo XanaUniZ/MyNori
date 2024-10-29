@@ -61,7 +61,7 @@ public:
 			return Color3f (0.0f);
 		}
 		else{
-			return m_radiance->eval(uv);
+			return m_scale*m_radiance->eval(uv);
 		}
 	}	
 
@@ -93,7 +93,7 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 		float mesh_pdf = m_mesh->pdf(lRec.p);
-		float normalization = lRec.dist / abs(lRec.n.dot(lRec.wi));
+		float normalization = lRec.dist*lRec.dist / abs(lRec.n.dot(lRec.wi));
 		mesh_pdf *= normalization;
 		return mesh_pdf;
 	}
