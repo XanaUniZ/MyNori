@@ -153,7 +153,7 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
         const Point3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
         n[0] = alpha*n0[0] + beta*n1[0] + gamma*n2[0];
         n[1] = alpha*n0[1] + beta*n1[1] + gamma*n2[1];
-        n[2] = alpha*v0[2] + beta*n1[2] + gamma*n2[2];
+        n[2] = alpha*n0[2] + beta*n1[2] + gamma*n2[2];
         n /= n.norm();
     }
     else{
