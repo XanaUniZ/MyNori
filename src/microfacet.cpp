@@ -100,7 +100,7 @@ public:
         float alpha = m_alpha->eval(bRec.uv)[0];
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
         bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
-        return eval(bRec) / (Frame::cosTheta(bRec.wi) / pdf(bRec));
+        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
     }
 
     bool isDiffuse() const {
@@ -276,7 +276,25 @@ public:
             return Color3f(0.0f);
 
 
-		throw NoriException("RoughSubstrate::eval() is not yet implemented!");
+		Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
+        float cosTheta_i = Frame::cosTheta(bRec.wi);
+        float cosTheta_o = Frame::cosTheta(bRec.wo);
+
+        // f_diff
+
+        Color3f f_diff = ((28*m_kd->eval(bRec.uv))/(23*M_PI))* 
+                            (1-pow(((m_extIOR-m_intIOR)/(m_extIOR+m_intIOR)), 2))*
+                            (1-pow(1-0.5*cosTheta_i, 5))*
+                            (1-pow(1-0.5*cosTheta_o, 5));
+
+        // f_mf
+        float alpha = m_alpha->eval(bRec.uv)[0];
+        float D = Reflectance::BeckmannNDF(w_h, alpha);
+        Color3f F = Reflectance::fresnel(w_h.dot(bRec.wi), m_extIOR, m_intIOR);
+        float G = Reflectance::G1(bRec.wi, w_h, alpha)* Reflectance::G1(bRec.wo, w_h, alpha);
+        Color3f f_mf = (D*F*G) / (4*cosTheta_i*cosTheta_o);
+
+        return f_diff + f_mf;
 	}
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -303,7 +321,23 @@ public:
 
         bRec.measure = ESolidAngle;
 
-		throw NoriException("RoughSubstrate::sample() is not yet implemented!");
+        Normal3f normal(0., 0., 1.);
+        double rr = ((double) rand() / (RAND_MAX)) + 1;
+		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
+        if(rr < p_f_mf){
+            float alpha = m_alpha->eval(bRec.uv)[0];
+            Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
+            bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+            return eval(bRec) * Frame::cosTheta(bRec.wo) / 
+                    Warp::squareToBeckmannPdf(wh,alpha);
+        }
+        else{
+            float alpha = m_alpha->eval(bRec.uv)[0];
+            Vector3f wh = Warp::squareToCosineHemisphere(_sample);
+            bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+            return eval(bRec) * Frame::cosTheta(bRec.wo) / 
+                    Warp::squareToCosineHemispherePdf(wh);
+        }
 	}
 
     bool isDiffuse() const {
