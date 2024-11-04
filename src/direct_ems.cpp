@@ -49,7 +49,7 @@ public:
 
         // Perform a visibility query (shadow ray) and compute intersection
         if ((!scene->rayIntersect(shadow_ray, shadow_ray_its) ||
-            (emitterRecord.dist <= shadow_ray_its.t))){
+            (emitterRecord.dist <= shadow_ray_its.t+0.1))){
 
             BSDFQueryRecord bsdfRecord(
                 its.toLocal(-ray.d),
