@@ -306,7 +306,13 @@ public:
             || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
-		throw NoriException("RoughSubstrate::eval() is not yet implemented!");
+        Normal3f normal(0., 0., 1.);
+		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
+        Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
+        float alpha = m_alpha->eval(bRec.uv)[0];
+
+        return (p_f_mf * Warp::squareToBeckmannPdf(w_h, alpha)) + 
+                ((1-p_f_mf) * Warp::squareToCosineHemispherePdf(w_h));
     }
 
     /// Sample the BRDF
@@ -326,22 +332,25 @@ public:
 
         double rr = sample_copy[0]; 
 		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
+        Vector3f wh;
+        float alpha = m_alpha->eval(bRec.uv)[0];
         if(rr < p_f_mf){
             sample_copy[0] = rr / p_f_mf;
-            float alpha = m_alpha->eval(bRec.uv)[0];
-            Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
-            bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
-            return eval(bRec) * Frame::cosTheta(bRec.wo) / 
-                    Warp::squareToBeckmannPdf(wh,alpha);
+            wh = Warp::squareToBeckmann(_sample, alpha);
+            // bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+            // return eval(bRec) * Frame::cosTheta(bRec.wo) / 
+            //         Warp::squareToBeckmannPdf(wh,alpha);
         }
         else{
             sample_copy[0] = rr /(1 - p_f_mf);
-            float alpha = m_alpha->eval(bRec.uv)[0];
-            Vector3f wh = Warp::squareToCosineHemisphere(_sample);
-            bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
-            return eval(bRec) * Frame::cosTheta(bRec.wo) / 
-                    Warp::squareToCosineHemispherePdf(wh);
+            wh = Warp::squareToCosineHemisphere(_sample);
+            // bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+            // return eval(bRec) * Frame::cosTheta(bRec.wo) / 
+            //         Warp::squareToCosineHemispherePdf(wh);
         }
+
+        bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+        return (eval(bRec) * Frame::cosTheta(bRec.wo)) / pdf(bRec);
 	}
 
     bool isDiffuse() const {

@@ -20,7 +20,6 @@ public:
             return scene->getBackground(ray);
 
         float pdflight;
-        EmitterQueryRecord emitterRecord(its.p);
 
         // If we intersect a ligth return direct radiance 
         if (its.mesh->isEmitter()){
@@ -46,17 +45,25 @@ public:
         Intersection itsSampledRay;
         Ray3f sampledRay(its.p, initialBSDFQuery.wo);
 
-        if (!scene->rayIntersect(sampledRay, itsSampledRay)||
-            (!itsSampledRay.mesh->isEmitter()))
+        if (!scene->rayIntersect(sampledRay, itsSampledRay))
             return scene->getBackground(ray);
         
+        if (!itsSampledRay.mesh->isEmitter())
+            return Color3f(0.0);
 
         const Emitter* em = itsSampledRay.mesh->getEmitter();
-        // const Emitter* em = scene->importanceSampleEmitterIntensive(random_01, pdflight, &emitterRecord, sampler);
-        // const Emitter* em = scene->importanceSampleEmitter(random_01, pdflight);
 
         // Sample the point sources, getting its radiance and direction
-        Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
+        // Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
+        EmitterQueryRecord emitterRecord(its.p);
+        emitterRecord.p = itsSampledRay.p;
+        emitterRecord.wi = (emitterRecord.p - emitterRecord.ref).normalized();
+        emitterRecord.dist = (emitterRecord.p - emitterRecord.ref).norm();
+
+        emitterRecord.uv = itsSampledRay.uv;
+        emitterRecord.n = itsSampledRay.geoFrame.n;
+        emitterRecord.pdf = em->pdf(emitterRecord);
+        Color3f Le = em->eval(emitterRecord);
 
 
         BSDFQueryRecord bsdfRecord(
