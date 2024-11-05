@@ -56,7 +56,7 @@ public:
         float cosTheta_i = Frame::cosTheta(bRec.wi);
         float cosTheta_o = Frame::cosTheta(bRec.wo);
 
-        float alpha = m_alpha->eval(bRec.uv)[0];
+        float alpha = m_alpha->eval(bRec.uv).mean();
         float alpha_sq = alpha*alpha;
         Color3f R0 = m_R0->eval(bRec.uv);
 
@@ -79,7 +79,7 @@ public:
             || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
-        float alpha = m_alpha->eval(bRec.uv)[0];
+        float alpha = m_alpha->eval(bRec.uv).mean();
         Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
 
         return Warp::squareToBeckmannPdf(w_h, alpha);
@@ -97,7 +97,7 @@ public:
 
         bRec.measure = ESolidAngle;
 
-        float alpha = m_alpha->eval(bRec.uv)[0];
+        float alpha = m_alpha->eval(bRec.uv).mean();
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
         bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
         return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
@@ -288,7 +288,7 @@ public:
                             (1-pow(1-0.5*cosTheta_o, 5));
 
         // f_mf
-        float alpha = m_alpha->eval(bRec.uv)[0];
+        float alpha = m_alpha->eval(bRec.uv).mean();
         float D = Reflectance::BeckmannNDF(w_h, alpha);
         Color3f F = Reflectance::fresnel(w_h.dot(bRec.wi), m_extIOR, m_intIOR);
         float G = Reflectance::G1(bRec.wi, w_h, alpha)* Reflectance::G1(bRec.wo, w_h, alpha);
@@ -309,7 +309,7 @@ public:
         Normal3f normal(0., 0., 1.);
 		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
         Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
-        float alpha = m_alpha->eval(bRec.uv)[0];
+        float alpha = m_alpha->eval(bRec.uv).mean();
 
         return (p_f_mf * Warp::squareToBeckmannPdf(w_h, alpha)) + 
                 ((1-p_f_mf) * Warp::squareToCosineHemispherePdf(w_h));
@@ -333,7 +333,7 @@ public:
         double rr = sample_copy[0]; 
 		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
         Vector3f wh;
-        float alpha = m_alpha->eval(bRec.uv)[0];
+        float alpha = m_alpha->eval(bRec.uv).mean();
         if(rr < p_f_mf){
             sample_copy[0] = rr / p_f_mf;
             wh = Warp::squareToBeckmann(_sample, alpha);
