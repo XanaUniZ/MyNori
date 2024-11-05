@@ -58,7 +58,7 @@ public:
 
         float alpha = m_alpha->eval(bRec.uv)[0];
         float alpha_sq = alpha*alpha;
-        Color3f R0 = m_R0->eval(bRec.uv)[0];
+        Color3f R0 = m_R0->eval(bRec.uv);
 
         // float D = exp(-pow(Frame::tanTheta(w_h), 2)/alpha_sq) 
         //                 / (M_PI * alpha_sq * pow(Frame::cosTheta(w_h), 4));
@@ -322,9 +322,12 @@ public:
         bRec.measure = ESolidAngle;
 
         Normal3f normal(0., 0., 1.);
-        double rr = ((double) rand() / (RAND_MAX)) + 1;
+        Point2f sample_copy(_sample);
+
+        double rr = sample_copy[0]; 
 		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
         if(rr < p_f_mf){
+            sample_copy[0] = rr / p_f_mf;
             float alpha = m_alpha->eval(bRec.uv)[0];
             Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
             bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
@@ -332,6 +335,7 @@ public:
                     Warp::squareToBeckmannPdf(wh,alpha);
         }
         else{
+            sample_copy[0] = rr /(1 - p_f_mf);
             float alpha = m_alpha->eval(bRec.uv)[0];
             Vector3f wh = Warp::squareToCosineHemisphere(_sample);
             bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
