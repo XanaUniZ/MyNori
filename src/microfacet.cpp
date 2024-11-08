@@ -42,7 +42,7 @@ public:
     }
 
 
-    /// Evaluate the BRDF for the given pair of directions
+/// Evaluate the BRDF for the given pair of directions
     Color3f eval(const BSDFQueryRecord& bRec) const {
         /* This is a smooth BRDF -- return zero if the measure
         is wrong, or when queried for illumination on the backside */
@@ -50,25 +50,53 @@ public:
             || Frame::cosTheta(bRec.wi) <= 0
             || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
+        // throw NoriException("RoughConductor::eval() is not yet implemented!");
+        
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();         // wh is the half vector of the in and out directions
+        float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
+        float cosThetaI = Frame::cosTheta(bRec.wi);             // cosThetaI is the cosine of the angle between the in direction and the normal
+        float cosThetaO = Frame::cosTheta(bRec.wo);             // cosThetaO is the cosine of the angle between the out direction and the normal
+        // get the beckmann normal distribution
+        float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
+        // get the fresnel term under schlick's approximation
+        Color3f fresnel_term = Reflectance::fresnel(cosThetaI, m_R0->eval(bRec.uv));
+        // get beckmanns shadowing-masking term under the smith approximation
+        // defined as G(ωi,ωo,ωh) = G1(ωi,ωh) * G1(ωo,ωh)
+        float g1_input = Reflectance::G1(bRec.wi, wh, alpha);
+        float g1_output = Reflectance::G1(bRec.wo, wh, alpha);
+        float g_term = g1_input * g1_output;
+
+        // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
+        return (beckmann_term * fresnel_term * g_term) / (4.0f * cosThetaI * cosThetaO);
+    }
+
+    // /// Evaluate the BRDF for the given pair of directions
+    // Color3f eval(const BSDFQueryRecord& bRec) const {
+    //     /* This is a smooth BRDF -- return zero if the measure
+    //     is wrong, or when queried for illumination on the backside */
+    //     if (bRec.measure != ESolidAngle
+    //         || Frame::cosTheta(bRec.wi) <= 0
+    //         || Frame::cosTheta(bRec.wo) <= 0)
+    //         return Color3f(0.0f);
 
         
-        Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
-        float cosTheta_i = Frame::cosTheta(bRec.wi);
-        float cosTheta_o = Frame::cosTheta(bRec.wo);
+    //     Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
+    //     float cosTheta_i = Frame::cosTheta(bRec.wi);
+    //     float cosTheta_o = Frame::cosTheta(bRec.wo);
 
-        float alpha = m_alpha->eval(bRec.uv).mean();
-        float alpha_sq = alpha*alpha;
-        Color3f R0 = m_R0->eval(bRec.uv);
+    //     float alpha = m_alpha->eval(bRec.uv).mean();
+    //     float alpha_sq = alpha*alpha;
+    //     Color3f R0 = m_R0->eval(bRec.uv);
 
-        // float D = exp(-pow(Frame::tanTheta(w_h), 2)/alpha_sq) 
-        //                 / (M_PI * alpha_sq * pow(Frame::cosTheta(w_h), 4));
-        float D = Reflectance::BeckmannNDF(w_h, alpha);
+    //     // float D = exp(-pow(Frame::tanTheta(w_h), 2)/alpha_sq) 
+    //     //                 / (M_PI * alpha_sq * pow(Frame::cosTheta(w_h), 4));
+    //     float D = Reflectance::BeckmannNDF(w_h, alpha);
 
-        Color3f F = Reflectance::fresnel(cosTheta_i, R0);
+    //     Color3f F = Reflectance::fresnel(cosTheta_i, R0);
 
-        float G = Reflectance::G1(bRec.wi, w_h, alpha)* Reflectance::G1(bRec.wo, w_h, alpha);
-        return (D*F*G) / (4*cosTheta_i*cosTheta_o);
-    }
+    //     float G = Reflectance::G1(bRec.wi, w_h, alpha)* Reflectance::G1(bRec.wo, w_h, alpha);
+    //     return (D*F*G) / (4*cosTheta_i*cosTheta_o);
+    // }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
     float pdf(const BSDFQueryRecord& bRec) const {
@@ -99,7 +127,7 @@ public:
 
         float alpha = m_alpha->eval(bRec.uv).mean();
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
-        bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+        bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);
         return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
     }
 
@@ -349,7 +377,7 @@ public:
             //         Warp::squareToCosineHemispherePdf(wh);
         }
 
-        bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
+        bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);
         return (eval(bRec) * Frame::cosTheta(bRec.wo)) / pdf(bRec);
 	}
 

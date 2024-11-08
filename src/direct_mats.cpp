@@ -21,9 +21,9 @@ public:
 
         float pdflight;
 
-        // If we intersect a ligth return direct radiance 
+        // If we intersect a ligth return direct radiance
         if (its.mesh->isEmitter()){
-            EmitterQueryRecord selfEmitterRecord(Vector3f(0.));
+            EmitterQueryRecord selfEmitterRecord(ray.o);
             selfEmitterRecord.p = its.p;
             selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
             selfEmitterRecord.dist = its.t;
@@ -31,7 +31,7 @@ public:
             selfEmitterRecord.uv = its.uv;
             selfEmitterRecord.n = its.geoFrame.n;
             selfEmitterRecord.pdf = its.mesh->getEmitter()->pdf(selfEmitterRecord);
-            
+
             Color3f direct_radiance = its.mesh->getEmitter()->eval(selfEmitterRecord);
             Lo += direct_radiance;
         }
@@ -39,43 +39,57 @@ public:
         // Sample the direction given by the BSDF
         BSDFQueryRecord initialBSDFQuery(its.toLocal(-ray.d),its.uv);
 
-        float random_01 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        its.mesh->getBSDF()->sample(initialBSDFQuery, random_01);
+        Point2f sample = sampler->next2D();
+        Color3f brdfSample = its.mesh->getBSDF()->sample(initialBSDFQuery, sample);
+
+        // if (brdfSample.isZero() || brdfSample.hasNaN()) {   // if it is not valid, return black
+        //     return Color3f(0.0f);
+        // } 
+
+        Ray3f sampledRay(its.p, its.toWorld((initialBSDFQuery.wo)));
 
         Intersection itsSampledRay;
-        Ray3f sampledRay(its.p, initialBSDFQuery.wo);
-
-        if (!scene->rayIntersect(sampledRay, itsSampledRay))
+        if (!scene->rayIntersect(sampledRay, itsSampledRay)){
+            Color3f backgroundColor = scene->getBackground(sampledRay);
+            Lo += backgroundColor * brdfSample;
             return scene->getBackground(ray);
-        
-        if (!itsSampledRay.mesh->isEmitter())
-            return Color3f(0.0);
+        }
 
-        const Emitter* em = itsSampledRay.mesh->getEmitter();
+        if (itsSampledRay.mesh->isEmitter()){
+            const Emitter* em;
+            em = itsSampledRay.mesh->getEmitter();
 
-        // Sample the point sources, getting its radiance and direction
-        // Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
-        EmitterQueryRecord emitterRecord(its.p);
-        emitterRecord.p = itsSampledRay.p;
-        emitterRecord.wi = (emitterRecord.p - emitterRecord.ref).normalized();
-        emitterRecord.dist = (emitterRecord.p - emitterRecord.ref).norm();
+            // Sample the point sources, getting its radiance and direction
+            EmitterQueryRecord emitterRecord(its.p);
+            emitterRecord.p = itsSampledRay.p;
+            emitterRecord.wi = (emitterRecord.p - emitterRecord.ref).normalized();
+            emitterRecord.dist = (emitterRecord.p - emitterRecord.ref).norm();
 
-        emitterRecord.uv = itsSampledRay.uv;
-        emitterRecord.n = itsSampledRay.geoFrame.n;
-        emitterRecord.pdf = em->pdf(emitterRecord);
-        Color3f Le = em->eval(emitterRecord);
+            emitterRecord.uv = itsSampledRay.uv;
+            emitterRecord.n = itsSampledRay.geoFrame.n;
+
+            // EmitterQueryRecord emitterRecord(itsSampledRay.p);
+            // emitterRecord.ref = sampledRay.o;
+			// emitterRecord.wi = sampledRay.d;
+			// emitterRecord.n = itsSampledRay.shFrame.n;
+
+            Color3f Le = em->eval(emitterRecord);
 
 
-        BSDFQueryRecord bsdfRecord(
-            its.toLocal(-ray.d),
-            its.toLocal(emitterRecord.wi),
-            its.uv,
-            ESolidAngle
-        );
+            // BSDFQueryRecord bsdfRecord(
+            //     its.toLocal(-ray.d),
+            //     its.toLocal(emitterRecord.wi),
+            //     its.uv,
+            //     ESolidAngle
+            // );
 
-        // Accumulate incident light * foreshortening * BSDF term
-        Color3f bsdf = its.mesh->getBSDF()->eval(bsdfRecord);
-        Lo += (Le * its.shFrame.n.dot(emitterRecord.wi) * bsdf);
+            // Accumulate incident light * foreshortening * BSDF term
+            Color3f bsdf = brdfSample;
+            // cout << "Le: " << Le << endl;
+            // cout << "Cos(N): " << its.shFrame.n.dot(emitterRecord.wi) << endl;
+            // cout << "BSDF: " << bsdf << endl;
+            Lo += (Le * its.shFrame.n.dot(emitterRecord.wi) * bsdf);
+        }
 
         return Lo;
     }
