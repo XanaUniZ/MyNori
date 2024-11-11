@@ -343,6 +343,45 @@ public:
                 ((1-p_f_mf) * Warp::squareToCosineHemispherePdf(w_h));
     }
 
+    // /// Sample the BRDF
+    // Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const {
+    //     // Note: Once you have implemented the part that computes the scattered
+    //     // direction, the last part of this function should simply return the
+    //     // BRDF value divided by the solid angle density and multiplied by the
+    //     // cosine factor from the reflection equation, i.e.
+    //     // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
+    //     if (Frame::cosTheta(bRec.wi) <= 0)
+    //         return Color3f(0.0f);
+
+    //     bRec.measure = ESolidAngle;
+	// 	// throw NoriException("RoughSubstrate::sample() is not yet implemented!");
+        
+    //     // choose one component using russian roulette based on the F value
+    //     float alpha = m_alpha->eval(bRec.uv).getLuminance();
+    //     // compute the fresnel term over the surface normal
+    //     float fresnel = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
+    //     float random_number = std::rand() / (float)RAND_MAX;
+    //     // DiscretePDF m_pdf;
+    //     // m_pdf.reserve(2);
+    //     // m_pdf.append(fresnel);
+    //     // m_pdf.append(1 - fresnel);
+    //     // Point2f sampleCopy = _sample;
+    //     // // russian roulette
+    //     // if (m_pdf.sampleReuse(sampleCopy[0]) == 0) {
+    //     // russian roulette
+    //     if (random_number < fresnel) {
+    //         // if microfacet, use beckmann distribution to sample the  microfacet normal
+    //         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
+    //         // calculate the outgoing direction
+    //         bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);    // this is the outgoing direction
+    //     } else {
+    //         // if diffuse, use cosine weighted hemisphere to sample the diffuse normal
+    //         bRec.wo = Warp::squareToCosineHemisphere(_sample);      // this is the outgoing direction
+    //     }
+    //     // return the weight of the sample
+    //     return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
+    // }
+
     /// Sample the BRDF
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const {
         // Note: Once you have implemented the part that computes the scattered
@@ -355,29 +394,33 @@ public:
 
         bRec.measure = ESolidAngle;
 
-        Normal3f normal(0., 0., 1.);
         Point2f sample_copy(_sample);
 
-        double rr = sample_copy[0]; 
-		float p_f_mf = Reflectance::fresnel(normal.dot(bRec.wi), m_extIOR, m_intIOR);
+        float rr = std::rand() / (float)RAND_MAX;
+        // cout << "SAMPLE: "<< _sample << endl;
+        // cout << "COPY: "<< sample_copy << endl;
+		float p_f_mf = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
         Vector3f wh;
         float alpha = m_alpha->eval(bRec.uv).mean();
         if(rr < p_f_mf){
-            sample_copy[0] = rr / p_f_mf;
+            // sample_copy[0] = std::rand() / (float)RAND_MAX;
+            // sample_copy[0] = rr / p_f_mf;
             wh = Warp::squareToBeckmann(_sample, alpha);
             // bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
             // return eval(bRec) * Frame::cosTheta(bRec.wo) / 
             //         Warp::squareToBeckmannPdf(wh,alpha);
+            bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);
         }
         else{
-            sample_copy[0] = rr /(1 - p_f_mf);
-            wh = Warp::squareToCosineHemisphere(_sample);
+            // sample_copy[0] = std::rand() / (float)RAND_MAX;
+            // sample_copy[0] = rr /(1 - p_f_mf);
+            bRec.wo = Warp::squareToCosineHemisphere(_sample);
             // bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
             // return eval(bRec) * Frame::cosTheta(bRec.wo) / 
             //         Warp::squareToCosineHemispherePdf(wh);
         }
 
-        bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);
+        
         return (eval(bRec) * Frame::cosTheta(bRec.wo)) / pdf(bRec);
 	}
 

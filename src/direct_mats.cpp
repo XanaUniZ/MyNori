@@ -52,7 +52,7 @@ public:
         if (!scene->rayIntersect(sampledRay, itsSampledRay)){
             Color3f backgroundColor = scene->getBackground(sampledRay);
             Lo += backgroundColor * brdfSample;
-            return scene->getBackground(ray);
+            return Lo;
         }
 
         if (itsSampledRay.mesh->isEmitter()){
@@ -88,7 +88,8 @@ public:
             // cout << "Le: " << Le << endl;
             // cout << "Cos(N): " << its.shFrame.n.dot(emitterRecord.wi) << endl;
             // cout << "BSDF: " << bsdf << endl;
-            Lo += (Le * its.shFrame.n.dot(emitterRecord.wi) * bsdf);
+            // its.shFrame.n.dot(emitterRecord.wi)
+            Lo += (Le * bsdf);
         }
 
         return Lo;
