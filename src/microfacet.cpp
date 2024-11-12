@@ -40,9 +40,8 @@ public:
            To be used when defining the Fresnel term using the Schlick's approximation*/
         m_R0 = new ConstantSpectrumTexture(propList.getColor("R0", Color3f(0.5f)));
     }
-
-
-/// Evaluate the BRDF for the given pair of directions
+    
+    /// Evaluate the BRDF for the given pair of directions
     Color3f eval(const BSDFQueryRecord& bRec) const {
         /* This is a smooth BRDF -- return zero if the measure
         is wrong, or when queried for illumination on the backside */
@@ -50,53 +49,25 @@ public:
             || Frame::cosTheta(bRec.wi) <= 0
             || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
-        // throw NoriException("RoughConductor::eval() is not yet implemented!");
-        
-        Vector3f wh = (bRec.wi + bRec.wo).normalized();         // wh is the half vector of the in and out directions
-        float alpha = m_alpha->eval(bRec.uv).getLuminance();    // alpha param is defining the roughness of the surface
-        float cosThetaI = Frame::cosTheta(bRec.wi);             // cosThetaI is the cosine of the angle between the in direction and the normal
-        float cosThetaO = Frame::cosTheta(bRec.wo);             // cosThetaO is the cosine of the angle between the out direction and the normal
-        // get the beckmann normal distribution
-        float beckmann_term = Reflectance::BeckmannNDF(wh, alpha);
-        // get the fresnel term under schlick's approximation
-        Color3f fresnel_term = Reflectance::fresnel(cosThetaI, m_R0->eval(bRec.uv));
-        // get beckmanns shadowing-masking term under the smith approximation
-        // defined as G(ωi,ωo,ωh) = G1(ωi,ωh) * G1(ωo,ωh)
-        float g1_input = Reflectance::G1(bRec.wi, wh, alpha);
-        float g1_output = Reflectance::G1(bRec.wo, wh, alpha);
-        float g_term = g1_input * g1_output;
 
-        // implement fr(ωi,ωo) = D(ωh)F((ωh ·ωi),R0)G(ωi,ωo,ωh) / 4cosθicosθo
-        return (beckmann_term * fresnel_term * g_term) / (4.0f * cosThetaI * cosThetaO);
+        
+        Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
+        float cosTheta_i = Frame::cosTheta(bRec.wi);
+        float cosTheta_o = Frame::cosTheta(bRec.wo);
+
+        float alpha = m_alpha->eval(bRec.uv).mean();
+        float alpha_sq = alpha*alpha;
+        Color3f R0 = m_R0->eval(bRec.uv);
+
+        // float D = exp(-pow(Frame::tanTheta(w_h), 2)/alpha_sq) 
+        //                 / (M_PI * alpha_sq * pow(Frame::cosTheta(w_h), 4));
+        float D = Reflectance::BeckmannNDF(w_h, alpha);
+
+        Color3f F = Reflectance::fresnel(cosTheta_i, R0);
+
+        float G = Reflectance::G1(bRec.wi, w_h, alpha)* Reflectance::G1(bRec.wo, w_h, alpha);
+        return (D*F*G) / (4*cosTheta_i*cosTheta_o);
     }
-
-    // /// Evaluate the BRDF for the given pair of directions
-    // Color3f eval(const BSDFQueryRecord& bRec) const {
-    //     /* This is a smooth BRDF -- return zero if the measure
-    //     is wrong, or when queried for illumination on the backside */
-    //     if (bRec.measure != ESolidAngle
-    //         || Frame::cosTheta(bRec.wi) <= 0
-    //         || Frame::cosTheta(bRec.wo) <= 0)
-    //         return Color3f(0.0f);
-
-        
-    //     Vector3f w_h = (bRec.wi + bRec.wo) / (bRec.wi + bRec.wo).norm();
-    //     float cosTheta_i = Frame::cosTheta(bRec.wi);
-    //     float cosTheta_o = Frame::cosTheta(bRec.wo);
-
-    //     float alpha = m_alpha->eval(bRec.uv).mean();
-    //     float alpha_sq = alpha*alpha;
-    //     Color3f R0 = m_R0->eval(bRec.uv);
-
-    //     // float D = exp(-pow(Frame::tanTheta(w_h), 2)/alpha_sq) 
-    //     //                 / (M_PI * alpha_sq * pow(Frame::cosTheta(w_h), 4));
-    //     float D = Reflectance::BeckmannNDF(w_h, alpha);
-
-    //     Color3f F = Reflectance::fresnel(cosTheta_i, R0);
-
-    //     float G = Reflectance::G1(bRec.wi, w_h, alpha)* Reflectance::G1(bRec.wo, w_h, alpha);
-    //     return (D*F*G) / (4*cosTheta_i*cosTheta_o);
-    // }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
     float pdf(const BSDFQueryRecord& bRec) const {
@@ -340,47 +311,8 @@ public:
         float alpha = m_alpha->eval(bRec.uv).mean();
 
         return (p_f_mf * Warp::squareToBeckmannPdf(w_h, alpha)) + 
-                ((1-p_f_mf) * Warp::squareToCosineHemispherePdf(w_h));
+                ((1-p_f_mf) * Warp::squareToCosineHemispherePdf(bRec.wo));
     }
-
-    // /// Sample the BRDF
-    // Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const {
-    //     // Note: Once you have implemented the part that computes the scattered
-    //     // direction, the last part of this function should simply return the
-    //     // BRDF value divided by the solid angle density and multiplied by the
-    //     // cosine factor from the reflection equation, i.e.
-    //     // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
-    //     if (Frame::cosTheta(bRec.wi) <= 0)
-    //         return Color3f(0.0f);
-
-    //     bRec.measure = ESolidAngle;
-	// 	// throw NoriException("RoughSubstrate::sample() is not yet implemented!");
-        
-    //     // choose one component using russian roulette based on the F value
-    //     float alpha = m_alpha->eval(bRec.uv).getLuminance();
-    //     // compute the fresnel term over the surface normal
-    //     float fresnel = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-    //     float random_number = std::rand() / (float)RAND_MAX;
-    //     // DiscretePDF m_pdf;
-    //     // m_pdf.reserve(2);
-    //     // m_pdf.append(fresnel);
-    //     // m_pdf.append(1 - fresnel);
-    //     // Point2f sampleCopy = _sample;
-    //     // // russian roulette
-    //     // if (m_pdf.sampleReuse(sampleCopy[0]) == 0) {
-    //     // russian roulette
-    //     if (random_number < fresnel) {
-    //         // if microfacet, use beckmann distribution to sample the  microfacet normal
-    //         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);   // this is the microfacet normal
-    //         // calculate the outgoing direction
-    //         bRec.wo = ((2.0f * bRec.wi.dot(wh) * wh) - bRec.wi);    // this is the outgoing direction
-    //     } else {
-    //         // if diffuse, use cosine weighted hemisphere to sample the diffuse normal
-    //         bRec.wo = Warp::squareToCosineHemisphere(_sample);      // this is the outgoing direction
-    //     }
-    //     // return the weight of the sample
-    //     return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
-    // }
 
     /// Sample the BRDF
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const {
