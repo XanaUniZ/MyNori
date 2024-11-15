@@ -55,20 +55,6 @@ public:
         Ray3f shadow_ray = Ray3f(its.p, emitterRecord.wi.normalized());
         Intersection shadow_ray_its;
 
-        // if (its.mesh->isEmitter()){
-        //     EmitterQueryRecord selfEmitterRecord(Vector3f(0.));
-        //     selfEmitterRecord.p = its.p;
-        //     selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
-        //     selfEmitterRecord.dist = its.t;
-
-        //     selfEmitterRecord.uv = its.uv;
-        //     selfEmitterRecord.n = its.geoFrame.n;
-        //     selfEmitterRecord.pdf = its.mesh->getEmitter()->pdf(selfEmitterRecord);
-            
-        //     Color3f direct_radiance = its.mesh->getEmitter()->eval(selfEmitterRecord);
-        //     Lo += direct_radiance;
-        // }
-
         // Perform a visibility query (shadow ray) and compute intersection
         if ((!scene->rayIntersect(shadow_ray, shadow_ray_its) ||
             (emitterRecord.dist <= shadow_ray_its.t+0.1))){
