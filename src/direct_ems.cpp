@@ -12,6 +12,25 @@ public:
         /* No parameters this time */
     }
 
+    Color3f DirectRadiance(const Intersection * its, const Point3f* origin) const{
+        Color3f res = Color3f(0.);
+        // If we intersect a ligth return direct radiance
+        if (its->mesh->isEmitter()){
+            EmitterQueryRecord selfEmitterRecord(*origin);
+            selfEmitterRecord.p = its->p;
+            selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
+            selfEmitterRecord.dist = its->t;
+
+            selfEmitterRecord.uv = its->uv;
+            selfEmitterRecord.n = its->geoFrame.n;
+            selfEmitterRecord.pdf = its->mesh->getEmitter()->pdf(selfEmitterRecord);
+
+            Color3f direct_radiance = its->mesh->getEmitter()->eval(selfEmitterRecord);
+            res += direct_radiance;
+        }
+        return res;
+    }
+
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
         Color3f Lo(0.);
         // Find the surface that is visible in the requested direction
@@ -21,6 +40,9 @@ public:
 
         float pdflight;
         EmitterQueryRecord emitterRecord(its.p);
+
+        Lo += DirectRadiance(&its, &ray.o);
+
         // Sample a ligth in the scene
         float random_01 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         const Emitter* em = scene->sampleEmitter(random_01, pdflight);
@@ -33,19 +55,19 @@ public:
         Ray3f shadow_ray = Ray3f(its.p, emitterRecord.wi.normalized());
         Intersection shadow_ray_its;
 
-        if (its.mesh->isEmitter()){
-            EmitterQueryRecord selfEmitterRecord(Vector3f(0.));
-            selfEmitterRecord.p = its.p;
-            selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
-            selfEmitterRecord.dist = its.t;
+        // if (its.mesh->isEmitter()){
+        //     EmitterQueryRecord selfEmitterRecord(Vector3f(0.));
+        //     selfEmitterRecord.p = its.p;
+        //     selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
+        //     selfEmitterRecord.dist = its.t;
 
-            selfEmitterRecord.uv = its.uv;
-            selfEmitterRecord.n = its.geoFrame.n;
-            selfEmitterRecord.pdf = its.mesh->getEmitter()->pdf(selfEmitterRecord);
+        //     selfEmitterRecord.uv = its.uv;
+        //     selfEmitterRecord.n = its.geoFrame.n;
+        //     selfEmitterRecord.pdf = its.mesh->getEmitter()->pdf(selfEmitterRecord);
             
-            Color3f direct_radiance = its.mesh->getEmitter()->eval(selfEmitterRecord);
-            Lo += direct_radiance;
-        }
+        //     Color3f direct_radiance = its.mesh->getEmitter()->eval(selfEmitterRecord);
+        //     Lo += direct_radiance;
+        // }
 
         // Perform a visibility query (shadow ray) and compute intersection
         if ((!scene->rayIntersect(shadow_ray, shadow_ray_its) ||
