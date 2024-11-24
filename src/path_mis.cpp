@@ -61,13 +61,19 @@ public:
 
             // Accumulate incident light * foreshortening * BSDF term
             Color3f bsdf = sceneIts->mesh->getBSDF()->eval(bsdfRecord);
+            // if (!(bsdf.isZero() || bsdf.hasNaN())) {   
+            //     return Color3f(0.);
+            // } 
             res += (Le * sceneIts->shFrame.n.dot(emitterRecord.wi) *
                 bsdf) / pdflight;
-
+            
+            bsdfRecord.wo = emitterRecord.wi;
             p_mat_em = sceneIts->mesh->getBSDF()->pdf(bsdfRecord);    //BRDF pdf for emitter sampling
-            p_em_em = pdflight*sampled_em->pdf(emitterRecord); 
-            if (p_em_em + p_mat_em > Epsilon){ // if you dont enter this, Les will be 0
-                // compute the weight
+            float emSampling_pdf = sampled_em->pdf(emitterRecord);
+            emSampling_pdf = emSampling_pdf < 0.5 ? 0.5 : emSampling_pdf;
+            p_em_em = pdflight*emSampling_pdf; // TODO THIS LINE FUCKED UP
+            
+            if (p_em_em + p_mat_em > Epsilon){ 
                 w_emmiter = p_em_em / (p_em_em + p_mat_em);
             }
             res *= w_emmiter;
@@ -82,7 +88,7 @@ public:
 
     Color3f BSDFSampling(const Intersection * sceneIts, const Ray3f& sceneRay,
                             const Scene* scene, Sampler* sampler,
-                            Ray3f* new_ray, float * term_prob) const {
+                            Ray3f* new_ray, float * term_prob,bool *directLight) const {
         float w_bsdf = 0.f;
         float p_mat_mat = 0.f, p_em_mat = 0.f;
         // BSDF ray
@@ -96,34 +102,46 @@ public:
         // } 
 
         Color3f throughput;
+        throughput = brdfSample;
         if (BSDFQuery.measure == EDiscrete){
-            Ray3f sampledRay(sceneIts->p, sceneIts->toWorld((BSDFQuery.wo)));
-            Intersection itsSampledRay;
-            if (itsSampledRay.mesh->isEmitter()){
-                const Emitter* em;
-                em = itsSampledRay.mesh->getEmitter();
+            // Ray3f sampledRay(sceneIts->p, sceneIts->toWorld((BSDFQuery.wo)));
+            // Intersection itsSampledRay;
+            // if (itsSampledRay.mesh->isEmitter()){
+            //     const Emitter* em;
+            //     em = itsSampledRay.mesh->getEmitter();
 
-                // Sample the point sources, getting its radiance and direction
-                EmitterQueryRecord emitterRecord(sceneIts->p);
-                emitterRecord.p = itsSampledRay.p;
-                emitterRecord.wi = (emitterRecord.p - emitterRecord.ref).normalized();
-                emitterRecord.dist = (emitterRecord.p - emitterRecord.ref).norm();
+            //     // Sample the point sources, getting its radiance and direction
+            //     EmitterQueryRecord emitterRecord(sceneIts->p);
+            //     emitterRecord.p = itsSampledRay.p;
+            //     emitterRecord.wi = (emitterRecord.p - emitterRecord.ref).normalized();
+            //     emitterRecord.dist = (emitterRecord.p - emitterRecord.ref).norm();
 
-                emitterRecord.uv = itsSampledRay.uv;
-                emitterRecord.n = itsSampledRay.geoFrame.n;
+            //     emitterRecord.uv = itsSampledRay.uv;
+            //     emitterRecord.n = itsSampledRay.geoFrame.n;
 
-                Color3f Le = em->eval(emitterRecord);
+            //     Color3f Le = em->eval(emitterRecord);
 
-                // Accumulate incident light * foreshortening * BSDF term
-                Color3f bsdf = brdfSample;
-                throughput = brdfSample * Le;
-                p_em_mat = em->pdf(emitterRecord);
-            }
-
+            //     // Accumulate incident light * foreshortening * BSDF term
+            //     Color3f bsdf = brdfSample;
+            //     throughput = brdfSample * Le;
+            //     p_em_mat = em->pdf(emitterRecord);
+                
+            // }
+            *directLight = true;
         } else{
-            throughput = brdfSample;
+            *directLight = false;
         }
 
+        Ray3f emitterRay(sceneIts->p, BSDFQuery.wo);
+        Intersection itsRay;
+        if(scene->rayIntersect(emitterRay, itsRay) && itsRay.mesh->isEmitter()){
+            const Emitter* em = itsRay.mesh->getEmitter();
+            const EmitterQueryRecord emitterRecord(itsRay.p);
+            p_em_mat = 1./(scene->getLights().size()) * 
+                        em->pdf(emitterRecord);
+
+        }
+    
         p_mat_mat = sceneIts->mesh->getBSDF()->pdf(BSDFQuery);
         if (p_em_mat + p_mat_mat > Epsilon){
             // compute the weight
@@ -134,12 +152,12 @@ public:
         // now create a new ray with the sampled BSDF direction
         *new_ray = Ray3f(sceneIts->p, sceneIts->toWorld(BSDFQuery.wo));
         *term_prob = static_cast<float>(1. - std::min(throughput.maxCoeff(), 0.95f));
-
+    
         return throughput;
     }
 
     Color3f recursiveLi(const Scene* scene, Sampler* sampler, const Ray3f& ray,
-                        long int n_bounce, float term_prob) const {
+                        long int n_bounce, float term_prob, bool DirectLight) const {
         Color3f Lo(0.);
         // Find the surface that is visible in the requested direction
         Intersection its;
@@ -149,7 +167,7 @@ public:
         if (!has_interseced)
             return scene->getBackground(ray);
 
-        else if(its.mesh->isEmitter())
+        else if(its.mesh->isEmitter() && DirectLight)
             return DirectRadiance(&its, &ray.o);
 
         else{ // Intersected with a surface
@@ -159,12 +177,12 @@ public:
 
             // BSDF Sampling
             // Russian roulete to choose termination
-            if ( n_bounce < 2 || sampler->next1D() > -1){
+            if ( n_bounce < 2 || sampler->next1D() > term_prob){
                 float new_term_prob;
                 Ray3f new_ray;
                 Color3f throughput = BSDFSampling(&its, ray, scene, sampler,
-                                                 &new_ray, &new_term_prob);
-                Lo += throughput * recursiveLi(scene, sampler, new_ray, n_bounce+1, new_term_prob);
+                                                 &new_ray, &new_term_prob,&DirectLight);
+                Lo += throughput * recursiveLi(scene, sampler, new_ray, n_bounce+1, new_term_prob,DirectLight);
             }   
         }
         return Lo;
@@ -172,7 +190,7 @@ public:
 
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
        
-        return recursiveLi(scene, sampler, ray, 0, 0.1);
+        return recursiveLi(scene, sampler, ray, 0, 0.1 , true);
     }
 
     std::string toString() const {

@@ -71,7 +71,7 @@ public:
     }
 
     Color3f recursiveLi(const Scene* scene, Sampler* sampler, const Ray3f& ray,
-                        long int n_bounce, float term_prob) const {
+                        long int n_bounce, float term_prob, bool directLight) const {
         Color3f Lo(0.);
         // Find the surface that is visible in the requested direction
         Intersection its;
@@ -81,7 +81,7 @@ public:
         if (!has_interseced)
             return scene->getBackground(ray);
 
-        else if(its.mesh->isEmitter())
+        else if(its.mesh->isEmitter() && directLight)
             return DirectRadiance(&its, &ray.o);
 
         else{ // Intersected with a surface
@@ -103,26 +103,26 @@ public:
                 //     return Color3f(0.);
                 // } 
 
-                Color3f throughput;
+                Color3f throughput = brdfSample;
                 if (BSDFQuery.measure == EDiscrete){
-                    throughput = brdfSample;
+                    directLight = true;
                 } else{
-                    throughput = Color3f(1.);
+                    directLight = false;
                 }
                 
 
                 // now create a new ray with the sampled BSDF direction
                 Ray3f new_ray = Ray3f(its.p, its.toWorld(BSDFQuery.wo));
                 term_prob = 1. - std::min(throughput.maxCoeff(), 0.95f);
-                Lo += throughput * recursiveLi(scene, sampler, new_ray, n_bounce+1, term_prob);
+                Lo += throughput * recursiveLi(scene, sampler, new_ray, n_bounce+1, term_prob,directLight);
             }   
         }
         return Lo;
     }
 
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
-       
-        return recursiveLi(scene, sampler, ray, 0, 0.1);
+        
+        return recursiveLi(scene, sampler, ray, 0, 0.1,true);
     }
 
     std::string toString() const {
