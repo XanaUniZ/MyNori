@@ -93,8 +93,13 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 		float mesh_pdf = m_mesh->pdf(lRec.p);
-		float normalization = lRec.dist*lRec.dist / abs(lRec.n.dot(lRec.wi));
-		mesh_pdf *= normalization;
+		if (abs(lRec.n.dot(lRec.wi)) < 10e-5){
+			mesh_pdf = 0.;
+		}
+		else{
+			float normalization = lRec.dist*lRec.dist / abs(lRec.n.dot(lRec.wi));
+			mesh_pdf *= normalization;
+		}
 		return mesh_pdf;
 	}
 

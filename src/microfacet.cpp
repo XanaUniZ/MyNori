@@ -321,6 +321,7 @@ public:
         // BRDF value divided by the solid angle density and multiplied by the
         // cosine factor from the reflection equation, i.e.
         // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
+        // cout << "Substrate" << endl;
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
 
@@ -328,7 +329,8 @@ public:
 
         Point2f sample_copy(_sample);
 
-        float rr = std::rand() / (float)RAND_MAX;
+        // float rr = std::rand() / (float)RAND_MAX;
+        float rr = sample_copy[0];
         // cout << "SAMPLE: "<< _sample << endl;
         // cout << "COPY: "<< sample_copy << endl;
 		float p_f_mf = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
@@ -336,8 +338,8 @@ public:
         float alpha = m_alpha->eval(bRec.uv).mean();
         if(rr < p_f_mf){
             // sample_copy[0] = std::rand() / (float)RAND_MAX;
-            // sample_copy[0] = rr / p_f_mf;
-            wh = Warp::squareToBeckmann(_sample, alpha);
+            sample_copy[0] = rr / p_f_mf;
+            wh = Warp::squareToBeckmann(sample_copy, alpha);
             // bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
             // return eval(bRec) * Frame::cosTheta(bRec.wo) / 
             //         Warp::squareToBeckmannPdf(wh,alpha);
@@ -345,8 +347,8 @@ public:
         }
         else{
             // sample_copy[0] = std::rand() / (float)RAND_MAX;
-            // sample_copy[0] = rr /(1 - p_f_mf);
-            bRec.wo = Warp::squareToCosineHemisphere(_sample);
+            sample_copy[0] = (rr - p_f_mf) /(1 - p_f_mf);
+            bRec.wo = Warp::squareToCosineHemisphere(sample_copy);
             // bRec.wo = (wh - bRec.wi) / (wh - bRec.wi).norm();
             // return eval(bRec) * Frame::cosTheta(bRec.wo) / 
             //         Warp::squareToCosineHemispherePdf(wh);
