@@ -1,0 +1,207 @@
+#include <nori/warp.h>
+#include <nori/integrator.h>
+#include <nori/scene.h>
+#include <nori/emitter.h>
+#include <nori/bsdf.h>
+
+NORI_NAMESPACE_BEGIN
+
+class SingleScattering : public Integrator {
+public:
+    SingleScattering(const PropertyList& props) {
+        /* No parameters this time */
+    }
+
+    Color3f DirectRadiance(const Intersection * its, const Point3f* origin) const{
+        Color3f res = Color3f(0.);
+        // If we intersect a ligth return direct radiance
+        EmitterQueryRecord selfEmitterRecord(*origin);
+        selfEmitterRecord.p = its->p;
+        selfEmitterRecord.wi = (selfEmitterRecord.p - selfEmitterRecord.ref).normalized();
+        selfEmitterRecord.dist = its->t;
+
+        selfEmitterRecord.uv = its->uv;
+        selfEmitterRecord.n = its->geoFrame.n;
+        selfEmitterRecord.pdf = its->mesh->getEmitter()->pdf(selfEmitterRecord);
+
+        Color3f direct_radiance = its->mesh->getEmitter()->eval(selfEmitterRecord);
+        res += direct_radiance;
+        return res;
+    }
+
+    Color3f EmitterSampling(const Intersection * sceneIts, const Ray3f& sceneRay,
+                            const Scene* scene, Sampler* sampler) const {
+        float pdflight;
+        const Emitter* sampled_em = scene->sampleEmitter(sampler->next1D(), pdflight);
+        // const Emitter* sampled_em = scene->importanceSampleEmitterIntensive(random_01, pdflight, &emitterRecord, sampler);
+        // const Emitter* sampled_em = scene->importanceSampleEmitter(random_01, pdflight);
+        EmitterQueryRecord emitterRecord(sceneIts->p);
+
+        Color3f res = Color3f(0.);
+
+        // Sample the point sources, getting its radiance and direction
+        Color3f Le = sampled_em->sample(emitterRecord, sampler->next2D(), 0.);
+
+
+        Ray3f shadow_ray = Ray3f(sceneIts->p, emitterRecord.wi.normalized());
+        Intersection shadow_ray_its;
+
+        // Perform a visibility query (shadow ray) and compute intersection
+        if ((!scene->rayIntersect(shadow_ray, shadow_ray_its) ||
+            (emitterRecord.dist <= shadow_ray_its.t+0.1))){
+
+            BSDFQueryRecord bsdfRecord(
+                sceneIts->toLocal(-sceneRay.d),
+                sceneIts->toLocal(emitterRecord.wi),
+                sceneIts->uv,
+                ESolidAngle
+            );
+
+            // Accumulate incident light * foreshortening * BSDF term
+            Color3f bsdf = sceneIts->mesh->getBSDF()->eval(bsdfRecord);
+            double n_dot = sceneIts->shFrame.n.dot(emitterRecord.wi);
+            if (n_dot > 10e-5 && !Le.hasNaN() && Le.maxCoeff() < 10e6){
+                res += (Le * n_dot * bsdf) / pdflight;
+            }
+
+            // cout << "\npdflight: "<< pdflight << endl;
+            // cout << "Le: "<< Le << endl;
+            // cout << "bsdf: "<< bsdf << endl;
+            // cout << "n.dot: "<< sceneIts->shFrame.n.dot(emitterRecord.wi) << endl;
+        }
+        else{
+            // cout << "SHADOW -> " << shadow_ray_its.p << endl;
+        }
+
+        // if (res.hasNaN()){
+        //     cout << "\nLe: " << Le << endl;
+        // }
+        return res;
+    }
+
+    Color3f recursiveLi(const Scene* scene, Sampler* sampler, const Ray3f& ray,
+                        long int n_bounce, float term_prob, bool directLight) const {
+        Color3f Lo(0.);
+        // Find the surface that is visible in the requested direction
+        Intersection its;
+
+        // Pathtracing Recusion
+        bool has_interseced = scene->rayIntersect(ray, its);
+        if (!has_interseced)
+            return scene->getBackground(ray);
+
+        else if(its.mesh->isEmitter() && directLight){
+            Color3f direct = DirectRadiance(&its, &ray.o);
+            return direct;
+        }
+
+        else{ // Intersected with a surface
+
+            // Emitter Sampling ray
+            Lo += EmitterSampling(&its, ray, scene, sampler);
+
+            // BSDF Sampling
+            // Russian roulete to choose termination
+            if ( n_bounce < 2 || sampler->next1D() > term_prob){
+                // cout << "Nbounces: " << n_bounce << endl;
+                // BSDF ray
+                BSDFQueryRecord BSDFQuery(its.toLocal(-ray.d),its.uv);
+
+                Point2f sample = sampler->next2D();
+                Color3f brdfSample = its.mesh->getBSDF()->sample(BSDFQuery, sample);
+
+                if (brdfSample.isZero() || brdfSample.hasNaN()) {   
+                    return Color3f(0.);
+                } 
+
+                Color3f throughput = brdfSample / ( 1.0f - term_prob );
+                if (BSDFQuery.measure == EDiscrete){
+                    directLight = true;
+                } else{
+                    directLight = false;
+                }
+                
+
+                // now create a new ray with the sampled BSDF direction
+                Ray3f new_ray = Ray3f(its.p, its.toWorld(BSDFQuery.wo));
+                term_prob = 1. - std::min(throughput.maxCoeff(), 0.95f);
+                if (throughput.maxCoeff() < 10e-6){
+                    Lo += throughput;
+                }
+                else{
+                    Lo += throughput * recursiveLi(scene, sampler, new_ray, n_bounce+1, term_prob,directLight);
+                }
+            }   
+        }
+        return Lo;
+    }
+
+    Color3f GetLiSingleScattering(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
+        // Inicializa la radiancia acumulada
+        Color3f L(0.0f);
+
+        // Parámetros del medio
+        float sigma_s = 1.0f;   // Coeficiente de scattering
+        float sigma_t = 1.0f;   // Coeficiente de extinción (sigma_a + sigma_s)
+        float stepSize = 0.1f;  // Tamaño del paso para el ray marching
+
+        // Distancia máxima basada en la escena
+        float t = 0.0f;
+        float maxDistance = 10;
+        float pdflight;
+
+        while (t < maxDistance) {
+            // Punto de muestreo actual
+            Point3f samplePoint = ray(t);
+            t += stepSize;
+
+            // Calcula la transmitancia usando la Ley de Beer-Lambert
+            float transmittance = std::exp(-sigma_t * t);            
+
+            EmitterQueryRecord emitterRecord(samplePoint);
+            const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight);
+            Color3f Le = em->sample(emitterRecord, sampler->next2D(), 0.);
+
+            // // Muestrea una dirección para el scattering
+            // Vector3f wi = Warp::squareToUniformSphere(sampler->next2D());
+
+            // Ray3f scatterRay(samplePoint, wi);
+
+            // Intersection its;
+            // if (scene->rayIntersect(scatterRay, its) && its.mesh->isEmitter()) {
+            //     // Crear un EmitterQueryRecord correctamente
+            //     EmitterQueryRecord emitterRecord(
+            //         its.mesh->getEmitter(),  // Emitter
+            //         samplePoint,             // Punto de referencia
+            //         its.p,                   // Punto en el emisor
+            //         its.geoFrame.n,          // Normal en el emisor
+            //         its.uv                   // Coordenadas UV en el emisor
+            //     );
+
+            //     // Evalúa la radiancia emitida por el emisor
+            //     Color3f Le = its.mesh->getEmitter()->eval(emitterRecord);
+
+            //     // Asume una función de fase isotrópica
+            //     float phaseVal = Warp::squareToUniformSpherePdf(wi);
+
+            //     // Acumula la contribución del single scattering
+            //     L += (sigma_s * transmittance * Le * phaseVal) / emitterRecord.pdf;
+            // }
+        }
+
+        return L;
+    }
+
+    Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
+        
+        return GetLiSingleScattering(scene, sampler, ray);
+    }
+
+    std::string toString() const {
+        return "Direct Material Integrator []";
+    }
+};
+
+NORI_REGISTER_CLASS(SingleScattering, "single_scattering");
+
+NORI_NAMESPACE_END

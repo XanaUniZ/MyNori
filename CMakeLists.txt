@@ -105,6 +105,7 @@ add_executable(nori
   src/path.cpp
   src/path_nee.cpp
   src/path_mis.cpp
+  src/single_scattering.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
