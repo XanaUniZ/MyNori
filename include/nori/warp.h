@@ -74,6 +74,14 @@ public:
 
     /// Probability density of \ref squareToBeckmann()
     static float squareToBeckmannPdf(const Vector3f &m, float alpha);
+
+    /// Warp a uniformly distributed square sample to a Beckmann distribution * cosine for the given 'alpha' parameter
+    static Vector3f squareToOrientedBeckmann(const Point2f &sample, float alpha, const Vector3f &orientation);
+
+    /// Probability density of \ref squareToBeckmann()
+    static float squareToOrientedBeckmannPdf(const Vector3f &m, float alpha, const Vector3f &orientation);
+
+    static Eigen::Matrix3f computeRotationMatrix(const Vector3f &from, const Vector3f &to);
 };
 
 NORI_NAMESPACE_END

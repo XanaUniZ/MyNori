@@ -20,6 +20,7 @@
 #include <nori/vector.h>
 #include <nori/frame.h>
 #include <math.h>
+#include <Eigen/Dense>
 
 NORI_NAMESPACE_BEGIN
 
@@ -236,6 +237,75 @@ float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
     
     // Return the PDF as D(omega_h) * cos(theta_h)
     return D * cos_theta_h;
+}
+
+Vector3f Warp::squareToOrientedBeckmann(const Point2f &sample, float alpha, const Vector3f &orientation) {
+    // Sample theta_h using inverse CDF of the Beckmann distribution
+    float theta_h = atanf(alpha * sqrtf(-logf(1.0f - sample[0])));
+
+    // Sample phi uniformly in [0, 2π]
+    float phi = 2.0f * M_PI * sample[1];
+
+    // Convert spherical coordinates to Cartesian coordinates in the local frame
+    float sin_theta_h = sinf(theta_h);
+    float x = sin_theta_h * cosf(phi);
+    float y = sin_theta_h * sinf(phi);
+    float z = cosf(theta_h);
+
+    Vector3f localH(x, y, z);
+
+    // Rotate the sampled vector to align with the given orientation
+    Eigen::Matrix3f rotationMatrix = Warp::computeRotationMatrix(Eigen::Vector3f(0, 0, 1), orientation);
+    return rotationMatrix * localH;
+}
+
+float Warp::squareToOrientedBeckmannPdf(const Vector3f &m, float alpha, const Vector3f &orientation) {
+    // Ensure the direction is above the hemisphere
+    if (m.z() <= 0) {
+        return 0.0f;
+    }
+
+    // Rotate the direction to the local frame of the Beckmann distribution
+    Eigen::Matrix3f rotationMatrix = Warp::computeRotationMatrix(orientation, Eigen::Vector3f(0, 0, 1));
+    Vector3f localM = rotationMatrix * m;
+
+    // Compute the cosine of the angle theta_h
+    float cos_theta_h = localM.z(); // z component corresponds to cos(theta_h)
+
+    if (cos_theta_h <= 0) {
+        return 0.0f; // Points below the hemisphere have zero probability
+    }
+
+    // Compute the Beckmann distribution function D(omega_h)
+    float tan_theta_h = sqrtf(1.0f - cos_theta_h * cos_theta_h) / cos_theta_h;
+    float exponent = -(tan_theta_h * tan_theta_h) / (alpha * alpha);
+    float D = expf(exponent) / (M_PI * alpha * alpha * powf(cos_theta_h, 4));
+
+    // Return the PDF as D(omega_h) * cos(theta_h)
+    return D * cos_theta_h;
+}
+
+Eigen::Matrix3f Warp::computeRotationMatrix(const Vector3f &from, const Vector3f &to) {
+    // Normalize input vectors
+    Eigen::Vector3f from_normalized = from.normalized();
+    Eigen::Vector3f to_normalized = to.normalized();
+
+    // Compute the cross product to find the rotation axis
+    Eigen::Vector3f axis = from_normalized.cross(to_normalized);
+
+    // If vectors are parallel, no rotation is needed
+    if (axis.norm() < 1e-6) {
+        return Eigen::Matrix3f::Identity();
+    }
+
+    // Compute the angle between the vectors
+    float angle = acos(from_normalized.dot(to_normalized));
+
+    // Create an AngleAxis representation
+    Eigen::AngleAxisf angleAxis(angle, axis.normalized());
+
+    // Convert to a rotation matrix
+    return angleAxis.toRotationMatrix();
 }
 
 

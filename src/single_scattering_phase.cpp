@@ -6,9 +6,9 @@
 
 NORI_NAMESPACE_BEGIN
 
-class SingleScattering : public Integrator {
+class SingleScatteringPhase : public Integrator {
 public:
-    SingleScattering(const PropertyList& props) {
+    SingleScatteringPhase(const PropertyList& props) {
         /* No parameters this time */
     }
 
@@ -95,14 +95,13 @@ public:
         float t = 0.0f;
         float pdflight;
         int n_samples = 0;
-        float phase_funct = 1./(4*M_PI); // this is for spherical particles
         float maxDistance;
 
         Intersection its;
         bool has_interseced = scene->rayIntersect(ray, its);
         if (!has_interseced){
-            // Lo += std::exp(-sigma_t * t) * scene->getBackground(ray);
-            // maxDistance = 10;
+            Lo += std::exp(-sigma_t * t) * scene->getBackground(ray);
+            maxDistance = 10;
         }
 
         else if(its.mesh->isEmitter()){
@@ -118,6 +117,7 @@ public:
             maxDistance = its.t;
         }
 
+        Vector3f particle_orientation = Vector3f(0, -1,0);
         while (t < maxDistance) {
             // Punto de muestreo actual
             Point3f samplePoint = t*ray.d + ray.o;
@@ -140,6 +140,9 @@ public:
                 float T_crystal_to_eye = std::exp(-sigma_t * t);  
 
                 // Accumulate incident light * normal * BSDF term
+                float alpha = 0.1;
+                Vector3f w_h = (emitterRecord.wi + (-ray.d)) / (emitterRecord.wi + (-ray.d)).norm();
+                float phase_funct = Warp::squareToOrientedBeckmannPdf(w_h, alpha, particle_orientation);
                 Lo += (T_crystal_to_eye * T_ligth_to_crystal * Le * phase_funct) / pdflight;
                 // if(Lo.hasNaN()){
                 //     cout << "Le: " << Le << endl;
@@ -167,6 +170,6 @@ public:
     }
 };
 
-NORI_REGISTER_CLASS(SingleScattering, "single_scattering");
+NORI_REGISTER_CLASS(SingleScatteringPhase, "single_scattering_phase");
 
 NORI_NAMESPACE_END
