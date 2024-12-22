@@ -2,10 +2,10 @@
 # www.blender.org
 mtllib light.mtl
 o light
-v 0.230000 0.005000 -7.200000   # Placed far in Z (10 meters away)
-v 0.230000 0.005000 -7.000000   # Placed far in Z (10 meters away)
-v -0.240000 0.005000 -7.000000  # Placed far in Z (10 meters away)
-v -0.240000 0.005000 -7.200000  # Placed far in Z (10 meters away)
+v 0.230000 0.705000 -7.200000   # Placed far in Z (10 meters away)
+v 0.230000 0.705000 -7.000000   # Placed far in Z (10 meters away)
+v -0.240000 0.705000 -7.000000  # Placed far in Z (10 meters away)
+v -0.240000 0.705000 -7.200000  # Placed far in Z (10 meters away)
 vt 0.000000 1.000000
 usemtl light
 s 1

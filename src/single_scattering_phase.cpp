@@ -61,7 +61,7 @@ public:
             Color3f bsdf = sceneIts->mesh->getBSDF()->eval(bsdfRecord);
             double n_dot = sceneIts->shFrame.n.dot(emitterRecord.wi);
             if (n_dot > 10e-5 && !Le.hasNaN() && Le.maxCoeff() < 10e6){
-                res += (Le * n_dot * bsdf) / pdflight;
+                res += (Le * n_dot * bsdf) / (pdflight*(shadow_ray_its.t*shadow_ray_its.t));
             }
 
             // cout << "\npdflight: "<< pdflight << endl;
@@ -117,7 +117,10 @@ public:
             maxDistance = its.t;
         }
 
-        Vector3f particle_orientation = Vector3f(0, -1,0);
+        // Vector3f particle_orientation = Vector3f(0, -1,0);
+        Vector3f particle_orientation = Vector3f(0, -1, 0);
+        float alpha = 0.1;
+        Frame particleFrame(particle_orientation);
         while (t < maxDistance) {
             // Punto de muestreo actual
             Point3f samplePoint = t*ray.d + ray.o;
@@ -140,14 +143,18 @@ public:
                 float T_crystal_to_eye = std::exp(-sigma_t * t);  
 
                 // Accumulate incident light * normal * BSDF term
-                float alpha = 0.1;
                 Vector3f w_h = (emitterRecord.wi + (-ray.d)) / (emitterRecord.wi + (-ray.d)).norm();
+                // Convert ray.d (world) to the particle's local frame
+                // Vector3f local_ray_d = particleFrame.toLocal(-ray.d);
+                // Vector3f w_h = (emitterRecord.wi + local_ray_d).normalized();
                 float phase_funct = Warp::squareToOrientedBeckmannPdf(w_h, alpha, particle_orientation);
-                Lo += (T_crystal_to_eye * T_ligth_to_crystal * Le * phase_funct) / pdflight;
-                // if(Lo.hasNaN()){
+                // float phase_funct = Warp::squareToBeckmannPdf(w_h, alpha);
+                Lo += (T_crystal_to_eye * T_ligth_to_crystal * Le * phase_funct) / (pdflight*(shadow_ray_its.t*shadow_ray_its.t));
+                // if(shadow_ray_its.t < 0.1 && phase_funct > 0.001){
                 //     cout << "Le: " << Le << endl;
-                //     cout << "T_crystal_to_eye: " << T_crystal_to_eye << endl;
-                //     cout << "T_ligth_to_crystal: " << T_ligth_to_crystal << endl;
+                //     cout << "phase_funct: " << phase_funct << endl;
+                //     // cout << "T_crystal_to_eye: " << T_crystal_to_eye << endl;
+                //     // cout << "T_ligth_to_crystal: " << T_ligth_to_crystal << endl;
                 // }
                 n_samples++;
             }
