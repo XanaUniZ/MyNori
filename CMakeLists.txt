@@ -107,6 +107,9 @@ add_executable(nori
   src/path_mis.cpp
   src/single_scattering.cpp
   src/single_scattering_phase.cpp
+  src/single_scattering_lens.cpp
+  src/single_scattering_phase_lens.cpp
+  src/thin_lens.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

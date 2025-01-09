@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="single_scattering_lens"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="4"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="39.597755335771296"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="1500.0"/>
+		<integer name="width" value="1920"/>
+		<integer name="height" value="1080"/>
+		<transform name="toWorld">
+			<scale value="-1.000000 1.000000 -1.000000"/>
+			<matrix value="0.9641324281692505,0.030551757663488388,0.26365742087364197,484.38214111328125,0.265421599149704,-0.1109771877527237,-0.9577242136001587,-1023.9971313476562,-1.9977451870545337e-07,0.9933533668518066,-0.11510580033063889,68.35052490234375,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_2_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_3_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_4_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_5_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_6_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_7_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_8_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Object_9_blinn1SG.obj"/>
+		<bsdf type="diffuse" name="blinn1SG">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/mountain/Plane_Material.004.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.800000,0.800000,0.800000"/>
+		</bsdf>
+		<emitter type="area">
+			<color name="radiance" value="1.000000,1.000000,1.000000"/>
+		</emitter>
+	</mesh>
+</scene>

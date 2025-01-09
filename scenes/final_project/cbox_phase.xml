@@ -59,7 +59,8 @@
 	</mesh>
 
 	<mesh type="obj">
-		<string name="filename" value="meshes/light_floor.obj"/>
+		<!-- <string name="filename" value="meshes/light_floor.obj"/> -->
+		<string name="filename" value="meshes/light.obj"/>
 
 		<emitter type="area">
 			<color name="radiance" value="40 40 40"/>

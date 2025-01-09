@@ -1,7 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 
 <scene>
-	<integrator type="single_scattering"/>
+	<!-- <integrator type="single_scattering"/> -->
+	<integrator type="single_scattering_lens"/>
 
 	<camera type="perspective">
 		<float name="fov" value="27.7856"/>
@@ -13,6 +14,20 @@
 		<integer name="height" value="600"/>
 		<integer name="width" value="800"/>
 	</camera>
+
+	<!-- <camera type="thin_lens">
+		<float name="fov" value="27.7856"/>
+		<transform name="toWorld">
+			<scale value="-1,1,1"/>
+			<lookat target="0, 0.893051, 4.41198" origin="0, 0.919769, 5.41159" up="0, 1, 0"/>
+		</transform>
+
+		<integer name="height" value="600"/>
+		<integer name="width" value="800"/>
+
+		<float name="lensRadius" value="0.03"/>
+		<float name="focalDistance" value="5.5"/>
+	</camera> -->
 
 	<sampler type="independent">
 		<integer name="sampleCount" value="64"/>
@@ -46,15 +61,20 @@
 		<string name="filename" value="meshes/sphere1.obj"/>
 
 		<bsdf type="diffuse">
-			<color name="albedo" value="0.725 0.71 0.68"/>
+			<!-- <color name="albedo" value="0.725 0.71 0.68"/> -->
+			<color name="albedo" value="0.0 0.0 1.0"/>
 		</bsdf>
 	</mesh>
 
 	<mesh type="obj">
 		<string name="filename" value="meshes/sphere2.obj"/>
+		<!-- <transform name="toWorld">
+			<scale value="0.1 0.1 0.1"/>
+		</transform> -->
 
 		<bsdf type="diffuse">
-			<color name="albedo" value="0.725 0.71 0.68"/>
+			<!-- <color name="albedo" value="0.725 0.71 0.68"/> -->
+			<color name="albedo" value="1.0 0.0 0.0"/>
 		</bsdf>
 	</mesh>
 
@@ -63,6 +83,7 @@
 
 		<emitter type="area">
 			<color name="radiance" value="40 40 40"/>
+			<!-- <color name="radiance" value="10 10 60"/> -->
 		</emitter>
 	</mesh>
 </scene>
